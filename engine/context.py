@@ -54,7 +54,13 @@ def build_prompt(world: World, state: object, k: int = 5) -> str:
     memories = getattr(state, "memory", [])
     top = recall(memories, k)
     if top:
-        parts.append("Memories: " + "; ".join(m.content for m in top))
+        formatted = []
+        for m in top:
+            if m.tags:
+                formatted.append(f"{m.content} [{', '.join(m.tags)}]")
+            else:
+                formatted.append(m.content)
+        parts.append("Memories: " + "; ".join(formatted))
 
     # Rules highlights
     if world.rules_notes:
