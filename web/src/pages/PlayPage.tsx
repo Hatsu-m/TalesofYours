@@ -2,10 +2,12 @@ import { useParams } from 'react-router-dom'
 import { useState } from 'react'
 import ChatStream, { ChatMessage } from '../components/ChatStream'
 import InputBar from '../components/InputBar'
+import RollPrompt, { RollRequest } from '../components/RollPrompt'
 
 export default function PlayPage() {
   const { gameId } = useParams()
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [pendingRoll, setPendingRoll] = useState<RollRequest | null>(null)
 
   async function sendAction(text: string) {
     const playerMsg: ChatMessage = {
@@ -13,12 +15,7 @@ export default function PlayPage() {
       role: 'player',
       content: text,
     }
-    const dmMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'dm',
-      content: '',
-    }
-    setMessages((prev) => [...prev, playerMsg, dmMsg])
+    setMessages((prev) => [...prev, playerMsg])
 
     try {
       const resp = await fetch(`/games/${gameId}/turn`, {
@@ -26,26 +23,60 @@ export default function PlayPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
       })
-      const reader = resp.body?.getReader()
-      const decoder = new TextDecoder()
-      if (!reader) return
-      while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === dmMsg.id
-              ? { ...m, content: m.content + decoder.decode(value) }
-              : m,
-          ),
-        )
+      if (!resp.ok) throw new Error('request failed')
+      const data = await resp.json()
+      const dmMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'dm',
+        content: data.message,
+      }
+      setMessages((prev) => [...prev, dmMsg])
+      if (data.awaiting_player_roll && data.roll_request) {
+        setPendingRoll(data.roll_request as RollRequest)
+      } else {
+        setPendingRoll(null)
       }
     } catch {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === dmMsg.id ? { ...m, content: '[error streaming]' } : m,
-        ),
-      )
+      const errMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'dm',
+        content: '[error fetching turn]',
+      }
+      setMessages((prev) => [...prev, errMsg])
+    }
+  }
+
+  async function submitRoll(value: number, mod: number) {
+    if (!pendingRoll) return
+    const playerMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'player',
+      content: `Roll ${value}${mod ? ` + ${mod}` : ''}`,
+    }
+    setMessages((prev) => [...prev, playerMsg])
+    const resp = await fetch(`/games/${gameId}/player-roll`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        request_id: pendingRoll.id,
+        value,
+        mod,
+      }),
+    })
+    if (!resp.ok) {
+      throw new Error('invalid roll')
+    }
+    const data = await resp.json()
+    const dmMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'dm',
+      content: data.message,
+    }
+    setMessages((prev) => [...prev, dmMsg])
+    if (data.awaiting_player_roll && data.roll_request) {
+      setPendingRoll(data.roll_request as RollRequest)
+    } else {
+      setPendingRoll(null)
     }
   }
 
@@ -70,7 +101,12 @@ export default function PlayPage() {
       <aside className="hidden w-64 border-r border-gray-700 p-4 md:block">Left Panel</aside>
       <main className="flex flex-1 flex-col">
         <ChatStream messages={messages} />
-        <InputBar onSend={sendAction} onCommand={handleCommand} />
+        {pendingRoll && <RollPrompt request={pendingRoll} onSubmit={submitRoll} />}
+        <InputBar
+          onSend={sendAction}
+          onCommand={handleCommand}
+          disabled={!!pendingRoll}
+        />
       </main>
       <aside className="hidden w-64 border-l border-gray-700 p-4 md:block">Right Panel</aside>
     </div>
