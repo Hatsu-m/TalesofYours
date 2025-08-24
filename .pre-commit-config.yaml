@@ -1,0 +1,22 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.8
+    hooks:
+      - id: ruff
+      - id: ruff-format
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+  - repo: local
+    hooks:
+      - id: frontend-lint
+        name: frontend lint
+        entry: pnpm --dir web lint
+        language: system
+        pass_filenames: false
+      - id: frontend-typecheck
+        name: frontend typecheck
+        entry: pnpm --dir web typecheck
+        language: system
+        pass_filenames: false
