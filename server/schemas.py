@@ -59,6 +59,7 @@ class Character(BaseModel):
     id: int | None = None
     name: str
     stats: Stats
+    persona: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

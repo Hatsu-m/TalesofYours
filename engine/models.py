@@ -80,6 +80,7 @@ class Character(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
+    persona: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     stats: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
     type: Mapped[str] = mapped_column(String(50), default="character")
 
@@ -122,3 +123,21 @@ class GameState(Base):
     timeline: Mapped[List[str]] = mapped_column(JSON, default=list)
     memory: Mapped[List[str]] = mapped_column(JSON, default=list)
     pending_roll: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+
+    def add_companion(self, companion: Dict[str, Any]) -> None:
+        """Add a companion to the party enforcing a limit of three."""
+
+        companions = [m for m in self.party if m.get("type") == "companion"]
+        if len(companions) >= 3:
+            raise ValueError("party already has maximum companions")
+        data = {"type": "companion", **companion}
+        self.party.append(data)
+
+    def add_pet(self, pet: Dict[str, Any]) -> None:
+        """Add a pet to the party enforcing a limit of two."""
+
+        pets = [m for m in self.party if m.get("type") == "pet"]
+        if len(pets) >= 2:
+            raise ValueError("party already has maximum pets")
+        data = {"type": "pet", **pet}
+        self.party.append(data)
