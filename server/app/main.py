@@ -12,6 +12,7 @@ from .engine_service import (
     get_world,
     import_game_state,
     import_world,
+    validate_world,
     list_worlds,
     remove_companion,
     run_turn,
@@ -52,6 +53,15 @@ class WorldImport(BaseModel):
 def import_world_endpoint(payload: WorldImport) -> dict[str, int]:
     new_id = import_world(payload.content)
     return {"id": new_id}
+
+
+@app.post("/worlds/validate")
+def validate_world_endpoint(payload: WorldImport) -> Dict[str, Any]:
+    try:
+        world = validate_world(payload.content)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return world.model_dump()
 
 
 @app.get("/worlds/{world_id}")
