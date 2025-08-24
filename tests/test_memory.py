@@ -24,3 +24,13 @@ def test_decay_reduces_importance():
     memory.decay(memories, rate=0.5)
     top = memory.recall(memories, k=1)
     assert top[0].importance == 0.5
+
+
+def test_recall_with_tags() -> None:
+    memories: list[memory.MemoryItem] = []
+    memory.remember(memories, "saved the hero", importance=1.0, tags=["deeds"])
+    memory.remember(memories, "took an arrow", importance=0.8, tags=["injuries"])
+    memory.remember(memories, "stood by the player", importance=0.9, tags=["loyalty"])
+
+    top = memory.recall(memories, tags=["loyalty"])
+    assert [m.content for m in top] == ["stood by the player"]
