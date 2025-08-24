@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict
 
@@ -89,14 +90,88 @@ async def run_turn(
         def detect_roll_request(_: str) -> Dict[str, Any] | None:
             return None
 
-    roll_request = detect_roll_request(narration)
-    awaiting_player_roll = bool(roll_request)
-    state.pending_roll = roll_request if awaiting_player_roll else None
+    roll_request_obj = detect_roll_request(narration)
+    if roll_request_obj:
+        roll_request = roll_request_obj.model_dump()
+        roll_request["id"] = str(uuid.uuid4())
+        awaiting_player_roll = True
+    else:
+        roll_request = None
+        awaiting_player_roll = False
+    state.pending_roll = roll_request
 
     # Store narration in long‑term memory.
     remember(state.memory, narration)
 
     # Persist the updated state.
+    _GAME_STATES[game_id] = state
+
+    return DMResponse(
+        message=narration,
+        awaiting_player_roll=awaiting_player_roll,
+        roll_request=roll_request,
+    )
+
+
+async def submit_player_roll(
+    game_id: int,
+    request_id: str,
+    value: int,
+    mod: int = 0,
+    *,
+    model: str = "llama3",
+) -> DMResponse:
+    """Resolve a player-supplied roll and return the DM's narration."""
+
+    state = _GAME_STATES.get(game_id)
+    if state is None:
+        raise KeyError(f"Unknown game id: {game_id}")
+    pending = state.pending_roll
+    if not pending or pending.get("id") != request_id:
+        raise ValueError("No matching pending roll")
+
+    world = _WORLDS.get(state.world_id)
+    if world is None:
+        raise KeyError(f"Unknown world id: {state.world_id}")
+
+    # Resolve the roll using the default D&D 5e ruleset.  A more flexible
+    # rules loading mechanism will be introduced in later phases.
+    from engine.rules.dnd5e import DnD5eRules
+
+    rules = DnD5eRules()
+    dc = int(pending.get("dc") or 0)
+    _success, _total = rules.resolve_player_roll(value, mod, dc)
+    explanation = rules.format_roll_explanation(value, mod, dc)
+
+    remember(state.memory, explanation)
+
+    # Clear the pending roll before generating the next narration so that the
+    # prompt does not include the guard line.
+    state.pending_roll = None
+
+    prompt_context = build_prompt(world, state)
+    prompt = f"{SYSTEM_INSTRUCTIONS}\n{prompt_context}\n" f"System: {explanation}\nDM:"
+
+    narration = await generate(model=model, prompt=prompt)
+
+    try:  # pragma: no cover - optional dependency shim
+        from engine.mechanics import detect_roll_request
+    except Exception:  # pragma: no cover - executed only when module absent
+
+        def detect_roll_request(_: str) -> Dict[str, Any] | None:
+            return None
+
+    roll_request_obj = detect_roll_request(narration)
+    if roll_request_obj:
+        roll_request = roll_request_obj.model_dump()
+        roll_request["id"] = str(uuid.uuid4())
+        awaiting_player_roll = True
+    else:
+        roll_request = None
+        awaiting_player_roll = False
+
+    state.pending_roll = roll_request
+    remember(state.memory, narration)
     _GAME_STATES[game_id] = state
 
     return DMResponse(
