@@ -70,6 +70,12 @@ def import_world(markdown: str) -> int:
     return new_id
 
 
+def validate_world(markdown: str) -> World:
+    """Parse a world definition without persisting it."""
+
+    return load_world_from_string(markdown)
+
+
 def get_world(world_id: int) -> World:
     """Retrieve a world by identifier."""
 

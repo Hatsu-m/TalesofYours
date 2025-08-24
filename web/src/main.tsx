@@ -6,6 +6,7 @@ import './index.css'
 import HomePage from './pages/HomePage.tsx'
 import PlayPage from './pages/PlayPage.tsx'
 import WorldsPage from './pages/WorldsPage.tsx'
+import WorldEditorPage from './pages/WorldEditorPage.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -14,6 +15,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/" element={<HomePage />} />
         <Route path="/play/:gameId" element={<PlayPage />} />
         <Route path="/worlds" element={<WorldsPage />} />
+        <Route path="/worlds/new" element={<WorldEditorPage />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
