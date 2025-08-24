@@ -3,9 +3,10 @@ import { useState } from 'react'
 interface Props {
   onSend: (text: string) => void
   onCommand: (cmd: string) => void
+  disabled?: boolean
 }
 
-export default function InputBar({ onSend, onCommand }: Props) {
+export default function InputBar({ onSend, onCommand, disabled = false }: Props) {
   const [value, setValue] = useState('')
 
   function handleSubmit(e: React.FormEvent) {
@@ -28,6 +29,7 @@ export default function InputBar({ onSend, onCommand }: Props) {
         onChange={(e) => setValue(e.target.value)}
         placeholder="Type your action... (/save, /party, /help)"
         className="w-full rounded border border-gray-700 bg-gray-800 p-2"
+        disabled={disabled}
       />
     </form>
   )
