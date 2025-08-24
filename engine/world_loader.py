@@ -74,10 +74,9 @@ def _parse_entries(text: str) -> List[SectionEntry]:
     return entries
 
 
-def load_world(md_path: str | Path) -> World:
-    """Load a world definition from a Markdown file."""
+def _build_world(post: frontmatter.Post) -> World:
+    """Construct a :class:`World` instance from frontmatter ``Post`` data."""
 
-    post = frontmatter.load(md_path)
     required = {"id", "title", "ruleset", "end_goal"}
     if not required.issubset(post.keys()):
         missing = required.difference(post.keys())
@@ -96,6 +95,20 @@ def load_world(md_path: str | Path) -> World:
         items=_parse_entries(sections.get("Items", "")),
         rules_notes=sections.get("Rules Notes"),
     )
+
+
+def load_world(md_path: str | Path) -> World:
+    """Load a world definition from a Markdown file."""
+
+    post = frontmatter.load(md_path)
+    return _build_world(post)
+
+
+def load_world_from_string(text: str) -> World:
+    """Load a world definition from a Markdown string."""
+
+    post = frontmatter.loads(text)
+    return _build_world(post)
 
 
 def dump_world(world: World) -> str:
