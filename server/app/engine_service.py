@@ -8,7 +8,7 @@ from typing import Any, Dict
 
 from engine.context import build_prompt
 from engine.memory import MemoryItem, remember
-from engine.world_loader import World
+from engine.world_loader import World, load_world_from_string
 
 from .llm.ollama_client import generate
 
@@ -50,6 +50,74 @@ class GameState:
             raise ValueError("party already has maximum pets")
         data = {"type": "pet", **pet}
         self.party.append(data)
+
+
+def list_worlds() -> list[dict[str, Any]]:
+    """Return a minimal listing of available worlds."""
+
+    return [
+        {"id": wid, "title": w.title, "ruleset": w.ruleset}
+        for wid, w in _WORLDS.items()
+    ]
+
+
+def import_world(markdown: str) -> int:
+    """Import a world from Markdown text and return its identifier."""
+
+    world = load_world_from_string(markdown)
+    new_id = max(_WORLDS.keys(), default=0) + 1
+    _WORLDS[new_id] = world
+    return new_id
+
+
+def get_world(world_id: int) -> World:
+    """Retrieve a world by identifier."""
+
+    world = _WORLDS.get(world_id)
+    if world is None:
+        raise KeyError(f"Unknown world id: {world_id}")
+    return world
+
+
+def create_game(world_id: int) -> int:
+    """Create a new game state for the given world."""
+
+    if world_id not in _WORLDS:
+        raise KeyError(f"Unknown world id: {world_id}")
+    new_id = max(_GAME_STATES.keys(), default=0) + 1
+    _GAME_STATES[new_id] = GameState(world_id=world_id, current_location=0)
+    return new_id
+
+
+def get_game_state(game_id: int) -> Dict[str, Any]:
+    """Return the serialisable state for a game."""
+
+    return export_game_state(game_id)
+
+
+def add_companion(game_id: int, companion: Dict[str, Any]) -> None:
+    """Add a companion to the specified game state."""
+
+    state = _GAME_STATES.get(game_id)
+    if state is None:
+        raise KeyError(f"Unknown game id: {game_id}")
+    state.add_companion(companion)
+
+
+def remove_companion(game_id: int, companion_id: Any) -> None:
+    """Remove a companion from the specified game state."""
+
+    state = _GAME_STATES.get(game_id)
+    if state is None:
+        raise KeyError(f"Unknown game id: {game_id}")
+    before = len(state.party)
+    state.party = [
+        m
+        for m in state.party
+        if not (m.get("type") == "companion" and m.get("id") == companion_id)
+    ]
+    if len(state.party) == before:
+        raise KeyError(f"Unknown companion id: {companion_id}")
 
 
 def export_game_state(game_id: int) -> Dict[str, Any]:
