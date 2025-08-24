@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Dict
 
 from engine.context import build_prompt
@@ -12,6 +14,10 @@ from engine.world_loader import World, load_world_from_string
 from engine.rules import get_ruleset
 
 from .llm.ollama_client import generate
+
+
+SAVE_DIR = Path("saves")
+SAVE_DIR.mkdir(exist_ok=True)
 
 
 # In-memory storage used as a temporary stand‑in for a database.  The
@@ -127,6 +133,49 @@ def remove_companion(game_id: int, companion_id: Any) -> None:
         raise KeyError(f"Unknown companion id: {companion_id}")
 
 
+def _transcript_path(game_id: int) -> Path:
+    return SAVE_DIR / f"game_{game_id}.jsonl"
+
+
+def _autosave_path(game_id: int) -> Path:
+    return SAVE_DIR / f"game_{game_id}.json"
+
+
+def append_transcript(game_id: int, actor: str, text: str) -> None:
+    entry = {"actor": actor, "text": text}
+    path = _transcript_path(game_id)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(entry) + "\n")
+
+
+def autosave_game_state(game_id: int) -> None:
+    data = export_game_state(game_id)
+    path = _autosave_path(game_id)
+    with path.open("w", encoding="utf-8") as fh:
+        json.dump(data, fh)
+
+
+def load_autosave(game_id: int) -> None:
+    path = _autosave_path(game_id)
+    if not path.exists():
+        raise FileNotFoundError(f"No autosave for game {game_id}")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    _GAME_STATES[game_id] = _deserialize_game_state(data)
+
+
+def _deserialize_game_state(data: Dict[str, Any]) -> GameState:
+    memory = [MemoryItem(**m) for m in data.get("memory", [])]
+    return GameState(
+        world_id=int(data["world_id"]),
+        current_location=int(data.get("current_location", 0)),
+        party=list(data.get("party", [])),
+        flags=dict(data.get("flags", {})),
+        timeline=list(data.get("timeline", [])),
+        memory=memory,
+        pending_roll=data.get("pending_roll"),
+    )
+
+
 def export_game_state(game_id: int) -> Dict[str, Any]:
     """Return a serialisable representation of a game state."""
 
@@ -148,16 +197,7 @@ def export_game_state(game_id: int) -> Dict[str, Any]:
 def import_game_state(data: Dict[str, Any]) -> int:
     """Create a new game from a previously exported state."""
 
-    memory = [MemoryItem(**m) for m in data.get("memory", [])]
-    state = GameState(
-        world_id=int(data["world_id"]),
-        current_location=int(data.get("current_location", 0)),
-        party=list(data.get("party", [])),
-        flags=dict(data.get("flags", {})),
-        timeline=list(data.get("timeline", [])),
-        memory=memory,
-        pending_roll=data.get("pending_roll"),
-    )
+    state = _deserialize_game_state(data)
     new_id = max(_GAME_STATES.keys(), default=0) + 1
     _GAME_STATES[new_id] = state
     return new_id
@@ -238,6 +278,10 @@ async def run_turn(
     # Persist the updated state.
     _GAME_STATES[game_id] = state
 
+    append_transcript(game_id, "player", player_message)
+    append_transcript(game_id, "dm", narration)
+    autosave_game_state(game_id)
+
     return DMResponse(
         message=narration,
         awaiting_player_roll=awaiting_player_roll,
@@ -305,6 +349,11 @@ async def submit_player_roll(
     state.pending_roll = roll_request
     remember(state.memory, narration)
     _GAME_STATES[game_id] = state
+
+    append_transcript(game_id, "player", f"roll {value} (mod {mod})")
+    append_transcript(game_id, "system", explanation)
+    append_transcript(game_id, "dm", narration)
+    autosave_game_state(game_id)
 
     return DMResponse(
         message=narration,
