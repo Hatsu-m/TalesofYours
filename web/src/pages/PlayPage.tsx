@@ -1,13 +1,38 @@
 import { useParams } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import ChatStream, { ChatMessage } from '../components/ChatStream'
 import InputBar from '../components/InputBar'
 import RollPrompt, { RollRequest } from '../components/RollPrompt'
+import RulesBadge from '../components/RulesBadge'
 
 export default function PlayPage() {
   const { gameId } = useParams()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [pendingRoll, setPendingRoll] = useState<RollRequest | null>(null)
+  const [rulesInfo, setRulesInfo] = useState<
+    { label: string; instructions: string } | null
+  >(null)
+
+  useEffect(() => {
+    async function loadRules() {
+      const game = await fetch(`/games/${gameId}`).then((r) => r.json())
+      const world = await fetch(`/worlds/${game.world_id}`).then((r) => r.json())
+      const map: Record<string, { label: string; instructions: string }> = {
+        dnd5e: {
+          label: 'D&D 5e',
+          instructions:
+            'Use Dungeons & Dragons 5th Edition rules. A 20 always succeeds and a 1 always fails.',
+        },
+        custom_d6: {
+          label: 'Custom d6',
+          instructions:
+            'Roll a single d6 for checks. A 6 always succeeds and a 1 always fails.',
+        },
+      }
+      setRulesInfo(map[world.ruleset])
+    }
+    loadRules()
+  }, [gameId])
 
   async function sendAction(text: string) {
     const playerMsg: ChatMessage = {
@@ -97,7 +122,13 @@ export default function PlayPage() {
   }
 
   return (
-    <div className="flex h-full flex-col md:flex-row dark:bg-gray-900 dark:text-gray-100">
+    <div className="relative flex h-full flex-col md:flex-row dark:bg-gray-900 dark:text-gray-100">
+      {rulesInfo && (
+        <RulesBadge
+          name={rulesInfo.label}
+          description={rulesInfo.instructions}
+        />
+      )}
       <aside className="hidden w-64 border-r border-gray-700 p-4 md:block">Left Panel</aside>
       <main className="flex flex-1 flex-col">
         <ChatStream messages={messages} />

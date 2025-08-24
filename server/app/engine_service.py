@@ -9,6 +9,7 @@ from typing import Any, Dict
 from engine.context import build_prompt
 from engine.memory import MemoryItem, remember
 from engine.world_loader import World, load_world_from_string
+from engine.rules import get_ruleset
 
 from .llm.ollama_client import generate
 
@@ -203,9 +204,11 @@ async def run_turn(
         raise KeyError(f"Unknown world id: {state.world_id}")
 
     # Assemble the prompt for the LLM.
+    rules = get_ruleset(world.ruleset)
     prompt_context = build_prompt(world, state)
     prompt = (
-        f"{SYSTEM_INSTRUCTIONS}\n{prompt_context}\n" f"Player: {player_message}\nDM:"
+        f"{SYSTEM_INSTRUCTIONS}\n{rules.system_instructions}\n{prompt_context}\n"
+        f"Player: {player_message}\nDM:"
     )
 
     narration = await generate(model=model, prompt=prompt)
@@ -263,11 +266,8 @@ async def submit_player_roll(
     if world is None:
         raise KeyError(f"Unknown world id: {state.world_id}")
 
-    # Resolve the roll using the default D&D 5e ruleset.  A more flexible
-    # rules loading mechanism will be introduced in later phases.
-    from engine.rules.dnd5e import DnD5eRules
-
-    rules = DnD5eRules()
+    # Resolve the roll using the world's configured ruleset.
+    rules = get_ruleset(world.ruleset)
     dc = int(pending.get("dc") or 0)
     _success, _total = rules.resolve_player_roll(value, mod, dc)
     explanation = rules.format_roll_explanation(value, mod, dc)
@@ -279,7 +279,10 @@ async def submit_player_roll(
     state.pending_roll = None
 
     prompt_context = build_prompt(world, state)
-    prompt = f"{SYSTEM_INSTRUCTIONS}\n{prompt_context}\n" f"System: {explanation}\nDM:"
+    prompt = (
+        f"{SYSTEM_INSTRUCTIONS}\n{rules.system_instructions}\n{prompt_context}\n"
+        f"System: {explanation}\nDM:"
+    )
 
     narration = await generate(model=model, prompt=prompt)
 
