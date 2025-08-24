@@ -27,14 +27,14 @@ Tales Of Yours is a local-first, AI-powered tabletop RPG engine that gives you a
    ```
 2. Backend setup:
    ```powershell
-   cd server
    uv venv
-   uv pip install -r requirements.txt
-   uv run fastapi dev
+   .\.venv\Scripts\activate
+   uv sync
+   uv run --directory server fastapi dev
    ```
 3. Frontend setup (in a new terminal):
    ```powershell
-   cd ..\web
+   cd web
    pnpm install
    pnpm dev
    ```
@@ -63,13 +63,13 @@ Tales Of Yours is a local-first, AI-powered tabletop RPG engine that gives you a
 **Manual setup**
 ```bash
 # Backend
-cd server
 uv venv
-uv pip install -r requirements.txt
-uv run fastapi dev
+source .venv/bin/activate
+uv sync
+uv run --directory server fastapi dev
 
 # Frontend
-cd ../web
+cd web
 pnpm install
 pnpm dev
 ```
