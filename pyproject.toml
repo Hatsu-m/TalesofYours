@@ -7,6 +7,8 @@ dependencies = [
     "fastapi[standard]",
     "httpx>=0.28.1",
     "uvicorn",
+    "sqlalchemy>=2",
+    "pydantic>=2",
 ]
 
 [project.optional-dependencies]
@@ -14,6 +16,7 @@ dev = [
     "black",
     "ruff",
     "pre-commit",
+    "pytest",
 ]
 
 [tool.black]
