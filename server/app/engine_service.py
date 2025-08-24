@@ -133,6 +133,53 @@ def remove_companion(game_id: int, companion_id: Any) -> None:
         raise KeyError(f"Unknown companion id: {companion_id}")
 
 
+STATE_UPDATE_PREFIX = "STATE_UPDATE:"
+
+
+def _apply_state_updates(state: GameState, updates: Dict[str, Any]) -> None:
+    """Merge structured updates into the game state."""
+
+    for member_update in updates.get("party", []):
+        member_id = member_update.get("id")
+        for member in state.party:
+            if member.get("id") == member_id:
+                if "stats" in member_update:
+                    member.setdefault("stats", {}).update(member_update["stats"])
+                if "inventory" in member_update:
+                    inv_update = member_update["inventory"]
+                    inventory = member.setdefault("inventory", [])
+                    for item in inv_update.get("add", []):
+                        if item not in inventory:
+                            inventory.append(item)
+                    for item in inv_update.get("remove", []):
+                        if item in inventory:
+                            inventory.remove(item)
+                break
+
+    if "flags" in updates:
+        state.flags.update(updates["flags"])
+    if "current_location" in updates:
+        state.current_location = int(updates["current_location"])
+
+
+def _extract_state_updates(state: GameState, narration: str) -> str:
+    """Strip state update markers from narration and apply them."""
+
+    lines = narration.splitlines()
+    kept: list[str] = []
+    for line in lines:
+        if line.startswith(STATE_UPDATE_PREFIX):
+            json_part = line[len(STATE_UPDATE_PREFIX) :].strip()
+            try:
+                updates = json.loads(json_part)
+                _apply_state_updates(state, updates)
+            except Exception:  # pragma: no cover - invalid update format
+                pass
+        else:
+            kept.append(line)
+    return "\n".join(kept).strip()
+
+
 def _transcript_path(game_id: int) -> Path:
     return SAVE_DIR / f"game_{game_id}.jsonl"
 
@@ -252,6 +299,7 @@ async def run_turn(
     )
 
     narration = await generate(model=model, prompt=prompt)
+    narration = _extract_state_updates(state, narration)
 
     # Attempt to detect roll requests.  This module is introduced in a
     # later phase of development, so we fail gracefully if it is missing.
@@ -329,6 +377,7 @@ async def submit_player_roll(
     )
 
     narration = await generate(model=model, prompt=prompt)
+    narration = _extract_state_updates(state, narration)
 
     try:  # pragma: no cover - optional dependency shim
         from engine.mechanics import detect_roll_request
