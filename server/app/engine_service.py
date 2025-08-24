@@ -33,6 +33,24 @@ class GameState:
     memory: list[MemoryItem] = field(default_factory=list)
     pending_roll: Dict[str, Any] | None = None
 
+    def add_companion(self, companion: dict[str, Any]) -> None:
+        """Add a companion to the party enforcing a maximum of three."""
+
+        companions = [m for m in self.party if m.get("type") == "companion"]
+        if len(companions) >= 3:
+            raise ValueError("party already has maximum companions")
+        data = {"type": "companion", **companion}
+        self.party.append(data)
+
+    def add_pet(self, pet: dict[str, Any]) -> None:
+        """Add a pet to the party enforcing a maximum of two."""
+
+        pets = [m for m in self.party if m.get("type") == "pet"]
+        if len(pets) >= 2:
+            raise ValueError("party already has maximum pets")
+        data = {"type": "pet", **pet}
+        self.party.append(data)
+
 
 @dataclass
 class DMResponse:
@@ -46,7 +64,8 @@ class DMResponse:
 SYSTEM_INSTRUCTIONS = (
     "You are a fair and impartial DM. "
     "Describe the world and the results of actions, "
-    "but never roll for the player."
+    "but never roll for the player. "
+    "Resolve companion and pet actions internally without requesting player rolls."
 )
 
 

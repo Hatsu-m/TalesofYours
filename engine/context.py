@@ -39,11 +39,16 @@ def build_prompt(world: World, state: object, k: int = 5) -> str:
     npcs = _format_entries(world.npcs)
     parts.append(f"NPCs here: {npcs}")
 
-    # Party roster
-    party_names = ", ".join(
-        member.get("name", "?") for member in getattr(state, "party", [])
-    )
-    parts.append(f"Party: {party_names or 'none'}")
+    # Party roster with personas
+    roster = []
+    for member in getattr(state, "party", []):
+        name = member.get("name", "?")
+        persona = member.get("persona")
+        if persona:
+            roster.append(f"{name}: {persona}")
+        else:
+            roster.append(name)
+    parts.append(f"Party: {', '.join(roster) or 'none'}")
 
     # Memories
     memories = getattr(state, "memory", [])
