@@ -35,6 +35,18 @@ Players physically roll dice, type the results, and the AI DM continues narratio
 - [Ollama installed](https://ollama.ai/) and at least one model pulled (e.g. `llama2:13b`)
 
 ### Setup
+### One-command dev
+
+With [Ollama](https://ollama.ai) and the `llama3` model installed:
+
+```bash
+make dev
+```
+
+This launches both the FastAPI backend and the Vite frontend.
+
+### Manual setup
+
 ```bash
 # Clone repo
 git clone https://github.com/your-username/local-ai-ttrpg.git
@@ -52,7 +64,7 @@ pnpm install
 pnpm dev
 ```
 
-Backend runs on `http://localhost:8000`  
+Backend runs on `http://localhost:8000`
 Frontend runs on `http://localhost:5173`
 
 ---
