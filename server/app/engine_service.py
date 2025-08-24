@@ -52,6 +52,42 @@ class GameState:
         self.party.append(data)
 
 
+def export_game_state(game_id: int) -> Dict[str, Any]:
+    """Return a serialisable representation of a game state."""
+
+    state = _GAME_STATES.get(game_id)
+    if state is None:
+        raise KeyError(f"Unknown game id: {game_id}")
+    return {
+        "id": game_id,
+        "world_id": state.world_id,
+        "current_location": state.current_location,
+        "party": state.party,
+        "flags": state.flags,
+        "timeline": state.timeline,
+        "memory": [m.model_dump() for m in state.memory],
+        "pending_roll": state.pending_roll,
+    }
+
+
+def import_game_state(data: Dict[str, Any]) -> int:
+    """Create a new game from a previously exported state."""
+
+    memory = [MemoryItem(**m) for m in data.get("memory", [])]
+    state = GameState(
+        world_id=int(data["world_id"]),
+        current_location=int(data.get("current_location", 0)),
+        party=list(data.get("party", [])),
+        flags=dict(data.get("flags", {})),
+        timeline=list(data.get("timeline", [])),
+        memory=memory,
+        pending_roll=data.get("pending_roll"),
+    )
+    new_id = max(_GAME_STATES.keys(), default=0) + 1
+    _GAME_STATES[new_id] = state
+    return new_id
+
+
 @dataclass
 class DMResponse:
     """Response returned after processing a turn."""

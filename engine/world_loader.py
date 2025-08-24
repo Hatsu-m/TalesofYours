@@ -98,6 +98,47 @@ def load_world(md_path: str | Path) -> World:
     )
 
 
+def dump_world(world: World) -> str:
+    """Serialise a :class:`World` back into Markdown format."""
+
+    lines: list[str] = [
+        "---",
+        f"id: {world.id}",
+        f"title: {world.title}",
+        f"ruleset: {world.ruleset}",
+        f"end_goal: {world.end_goal}",
+        "---",
+        "",
+        "## Lore",
+        world.lore,
+    ]
+
+    if world.locations:
+        lines.append("\n## Locations")
+        for entry in world.locations:
+            lines.extend([f"\n### {entry.name}", entry.description])
+
+    if world.npcs:
+        lines.append("\n## NPCs")
+        for entry in world.npcs:
+            lines.extend([f"\n### {entry.name}", entry.description])
+
+    if world.factions:
+        lines.append("\n## Factions")
+        for entry in world.factions:
+            lines.extend([f"\n### {entry.name}", entry.description])
+
+    if world.items:
+        lines.append("\n## Items")
+        for entry in world.items:
+            lines.extend([f"\n### {entry.name}", entry.description])
+
+    if world.rules_notes:
+        lines.extend(["\n## Rules Notes", world.rules_notes])
+
+    return "\n".join(lines) + "\n"
+
+
 if __name__ == "__main__":  # pragma: no cover
     import argparse
 
