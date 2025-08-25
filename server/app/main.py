@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
 import httpx
 from pydantic import BaseModel
 from typing import Any, Dict
@@ -22,6 +23,13 @@ from .llm.ollama_client import list_models
 from engine.world_loader import dump_world
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
