@@ -23,6 +23,7 @@ class World(BaseModel):
     id: str
     title: str
     ruleset: str
+    stats: List[str] = []
     end_goal: str
     lore: str
     locations: List[SectionEntry]
@@ -87,6 +88,7 @@ def _build_world(post: frontmatter.Post) -> World:
         id=str(post["id"]),
         title=str(post["title"]),
         ruleset=str(post["ruleset"]),
+        stats=list(post.get("stats", [])),
         end_goal=str(post["end_goal"]),
         lore=sections.get("Lore", ""),
         locations=_parse_entries(sections.get("Locations", "")),
@@ -119,12 +121,18 @@ def dump_world(world: World) -> str:
         f"id: {world.id}",
         f"title: {world.title}",
         f"ruleset: {world.ruleset}",
-        f"end_goal: {world.end_goal}",
-        "---",
-        "",
-        "## Lore",
-        world.lore,
     ]
+    if world.stats:
+        lines.append(f"stats: [{', '.join(world.stats)}]")
+    lines.extend(
+        [
+            f"end_goal: {world.end_goal}",
+            "---",
+            "",
+            "## Lore",
+            world.lore,
+        ]
+    )
 
     if world.locations:
         lines.append("\n## Locations")

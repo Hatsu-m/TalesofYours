@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -13,17 +13,23 @@ export interface NewCharacter {
 
 interface Props {
   gameId: string
+  statKeys: string[]
   onCreated: (character: NewCharacter) => void
 }
 
-export default function CreateCharacterForm({ gameId, onCreated }: Props) {
+export default function CreateCharacterForm({ gameId, statKeys, onCreated }: Props) {
   const [name, setName] = useState('')
   const [background, setBackground] = useState('')
   const [traits, setTraits] = useState('')
   const [hp, setHp] = useState(10)
-  const [strength, setStrength] = useState(0)
-  const [defense, setDefense] = useState(0)
+  const [stats, setStats] = useState<Record<string, number>>({})
   const [inventory, setInventory] = useState('')
+
+  useEffect(() => {
+    const initial: Record<string, number> = {}
+    for (const k of statKeys) initial[k] = 0
+    setStats(initial)
+  }, [statKeys])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -32,7 +38,7 @@ export default function CreateCharacterForm({ gameId, onCreated }: Props) {
       name,
       background: background || undefined,
       traits: traits || undefined,
-      stats: { hp, strength, defense },
+      stats: { hp, ...stats },
       inventory: inventory
         .split(',')
         .map((i) => i.trim())
@@ -75,7 +81,7 @@ export default function CreateCharacterForm({ gameId, onCreated }: Props) {
           onChange={(e) => setTraits(e.target.value)}
         />
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <div>
           <label className="block">HP</label>
           <input
@@ -85,24 +91,20 @@ export default function CreateCharacterForm({ gameId, onCreated }: Props) {
             onChange={(e) => setHp(Number(e.target.value))}
           />
         </div>
-        <div>
-          <label className="block">Strength</label>
-          <input
-            type="number"
-            className="w-20 rounded border border-gray-700 bg-gray-800 p-1"
-            value={strength}
-            onChange={(e) => setStrength(Number(e.target.value))}
-          />
-        </div>
-        <div>
-          <label className="block">Defense</label>
-          <input
-            type="number"
-            className="w-20 rounded border border-gray-700 bg-gray-800 p-1"
-            value={defense}
-            onChange={(e) => setDefense(Number(e.target.value))}
-          />
-        </div>
+        {statKeys.map((key) => (
+          <div key={key}>
+            <label className="block capitalize">{key}</label>
+            <input
+              type="number"
+              max={6}
+              className="w-20 rounded border border-gray-700 bg-gray-800 p-1"
+              value={stats[key] ?? 0}
+              onChange={(e) =>
+                setStats((prev) => ({ ...prev, [key]: Number(e.target.value) }))
+              }
+            />
+          </div>
+        ))}
       </div>
       <div>
         <label className="block">Starting Inventory (comma separated)</label>

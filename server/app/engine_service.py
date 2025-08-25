@@ -28,6 +28,20 @@ _GAME_STATES: dict[int, "GameState"] = {}
 _WORLDS: dict[int, World] = {}
 
 
+def _validate_stats(world: World, stats: Dict[str, Any]) -> None:
+    """Ensure stats conform to world configuration and ruleset limits."""
+
+    allowed = set(world.stats)
+    max_bonus = getattr(get_ruleset(world.ruleset), "MAX_BONUS", None)
+    for key, value in stats.items():
+        if key == "hp":
+            continue
+        if allowed and key not in allowed:
+            raise ValueError(f"unknown stat: {key}")
+        if max_bonus is not None and value > max_bonus:
+            raise ValueError(f"stat {key} exceeds maximum {max_bonus}")
+
+
 @dataclass
 class GameState:
     """Minimal game state container used for turn processing."""
@@ -114,6 +128,10 @@ def add_companion(game_id: int, companion: Dict[str, Any]) -> None:
     state = _GAME_STATES.get(game_id)
     if state is None:
         raise KeyError(f"Unknown game id: {game_id}")
+    world = _WORLDS[state.world_id]
+    stats = companion.get("stats")
+    if stats:
+        _validate_stats(world, stats)
     state.add_companion(companion)
 
 
@@ -151,6 +169,11 @@ def update_party_member(game_id: int, member_id: Any, updates: Dict[str, Any]) -
         raise KeyError(f"Unknown game id: {game_id}")
     for member in state.party:
         if member.get("id") == member_id:
+            if "stats" in updates:
+                world = _WORLDS[state.world_id]
+                stats_update = updates.pop("stats") or {}
+                _validate_stats(world, stats_update)
+                member.setdefault("stats", {}).update(stats_update)
             member.update(updates)
             return
     raise KeyError(f"Unknown party member id: {member_id}")
@@ -165,8 +188,8 @@ def update_world(world_id: int, updates: Dict[str, Any]) -> None:
 
     if "npcs" in updates:
         world.npcs = [SectionEntry(**n) for n in updates.pop("npcs")]
-    for field, value in updates.items():
-        setattr(world, field, value)
+    for key, value in updates.items():
+        setattr(world, key, value)
 
 
 def update_game_state(game_id: int, updates: Dict[str, Any]) -> None:
@@ -179,7 +202,13 @@ def update_game_state(game_id: int, updates: Dict[str, Any]) -> None:
     if "current_location" in updates:
         state.current_location = int(updates["current_location"])
     if "party" in updates:
-        state.party = list(updates["party"])
+        world = _WORLDS[state.world_id]
+        party = list(updates["party"])
+        for member in party:
+            stats = member.get("stats")
+            if stats:
+                _validate_stats(world, stats)
+        state.party = party
     if "flags" in updates:
         state.flags.update(updates["flags"])
     if "memory" in updates:
@@ -197,6 +226,8 @@ def _apply_state_updates(state: GameState, updates: Dict[str, Any]) -> None:
         for member in state.party:
             if member.get("id") == member_id:
                 if "stats" in member_update:
+                    world = _WORLDS[state.world_id]
+                    _validate_stats(world, member_update["stats"])
                     member.setdefault("stats", {}).update(member_update["stats"])
                 if "inventory" in member_update:
                     inv_update = member_update["inventory"]

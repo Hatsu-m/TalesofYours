@@ -22,6 +22,7 @@ export default function PlayPage() {
   const [worldTitle, setWorldTitle] = useState<string | null>(null)
   const [party, setParty] = useState<Character[]>([])
   const [showCreator, setShowCreator] = useState(false)
+  const [statKeys, setStatKeys] = useState<string[]>([])
   const [model] = useState<string>(
     () => localStorage.getItem('model') ?? 'llama3',
   )
@@ -39,6 +40,7 @@ export default function PlayPage() {
         r.json(),
       )
       setParty(game.party ?? [])
+      setStatKeys(world.stats ?? [])
       const map: Record<string, { label: string; instructions: string }> = {
         dnd5e: {
           label: 'D&D 5e',
@@ -186,6 +188,7 @@ export default function PlayPage() {
           showCreator ? (
             <CreateCharacterForm
               gameId={gameId!}
+              statKeys={statKeys}
               onCreated={(c: NewCharacter) => {
                 setParty([c])
                 setShowCreator(false)
