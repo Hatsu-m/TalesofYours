@@ -2,10 +2,20 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncGenerator
+import re
 
 import httpx
 
 OLLAMA_API_URL = "http://localhost:11434"
+
+_THINK_START = "<think>"
+_THINK_END = "</think>"
+
+
+def _strip_thinking_tags(text: str) -> str:
+    """Remove `<think>` sections from ``text``."""
+    pattern = re.compile(rf"{re.escape(_THINK_START)}.*?{re.escape(_THINK_END)}", re.DOTALL)
+    return re.sub(pattern, "", text)
 
 
 async def list_models(client: httpx.AsyncClient | None = None) -> list[str]:
@@ -42,7 +52,8 @@ async def generate(
         )
         response.raise_for_status()
         data = response.json()
-        return data.get("response", "")
+        raw = data.get("response", "")
+        return _strip_thinking_tags(raw)
     finally:
         if close_client:
             await client.aclose()
@@ -66,13 +77,36 @@ async def stream(
             json={"model": model, "prompt": prompt, "stream": True},
         ) as response:
             response.raise_for_status()
+            buffer = ""
+            in_think = False
             async for line in response.aiter_lines():
                 if not line:
                     continue
                 data = json.loads(line)
                 token = data.get("response")
-                if token:
-                    yield token
+                if not token:
+                    continue
+                buffer += token
+                while buffer:
+                    if in_think:
+                        end_idx = buffer.find(_THINK_END)
+                        if end_idx == -1:
+                            buffer = ""
+                            break
+                        buffer = buffer[end_idx + len(_THINK_END) :]
+                        in_think = False
+                    else:
+                        start_idx = buffer.find(_THINK_START)
+                        if start_idx == -1:
+                            yield buffer
+                            buffer = ""
+                            break
+                        if start_idx > 0:
+                            yield buffer[:start_idx]
+                        buffer = buffer[start_idx + len(_THINK_START) :]
+                        in_think = True
+            if buffer and not in_think:
+                yield buffer
     finally:
         if close_client:
             await client.aclose()
