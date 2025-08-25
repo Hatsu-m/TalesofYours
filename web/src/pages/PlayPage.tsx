@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import ChatStream, { type ChatMessage } from '../components/ChatStream'
 import InputBar from '../components/InputBar'
@@ -9,14 +9,17 @@ export default function PlayPage() {
   const { gameId } = useParams()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [pendingRoll, setPendingRoll] = useState<RollRequest | null>(null)
-  const [rulesInfo, setRulesInfo] = useState<
-    { label: string; instructions: string } | null
-  >(null)
+  const [rulesInfo, setRulesInfo] = useState<{
+    label: string
+    instructions: string
+  } | null>(null)
 
   useEffect(() => {
     async function loadRules() {
       const game = await fetch(`/games/${gameId}`).then((r) => r.json())
-      const world = await fetch(`/worlds/${game.world_id}`).then((r) => r.json())
+      const world = await fetch(`/worlds/${game.world_id}`).then((r) =>
+        r.json(),
+      )
       const map: Record<string, { label: string; instructions: string }> = {
         dnd5e: {
           label: 'D&D 5e',
@@ -123,23 +126,35 @@ export default function PlayPage() {
 
   return (
     <div className="relative flex h-full flex-col md:flex-row dark:bg-gray-900 dark:text-gray-100">
+      <Link
+        to="/"
+        className="absolute left-2 top-2 rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-700"
+      >
+        Home
+      </Link>
       {rulesInfo && (
         <RulesBadge
           name={rulesInfo.label}
           description={rulesInfo.instructions}
         />
       )}
-      <aside className="hidden w-64 border-r border-gray-700 p-4 md:block">Left Panel</aside>
+      <aside className="hidden w-64 border-r border-gray-700 p-4 md:block">
+        Left Panel
+      </aside>
       <main className="flex flex-1 flex-col">
         <ChatStream messages={messages} />
-        {pendingRoll && <RollPrompt request={pendingRoll} onSubmit={submitRoll} />}
+        {pendingRoll && (
+          <RollPrompt request={pendingRoll} onSubmit={submitRoll} />
+        )}
         <InputBar
           onSend={sendAction}
           onCommand={handleCommand}
           disabled={!!pendingRoll}
         />
       </main>
-      <aside className="hidden w-64 border-l border-gray-700 p-4 md:block">Right Panel</aside>
+      <aside className="hidden w-64 border-l border-gray-700 p-4 md:block">
+        Right Panel
+      </aside>
     </div>
   )
 }
