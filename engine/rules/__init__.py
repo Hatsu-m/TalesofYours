@@ -3,10 +3,12 @@
 from .base import RuleSystem
 from .dnd5e import DnD5eRules
 from .custom_d6 import CustomD6Rules
+from .simple_d20 import SimpleD20Rules
 
 _RULESET_MAP = {
     "dnd5e": DnD5eRules,
     "custom_d6": CustomD6Rules,
+    "simple_d20": SimpleD20Rules,
 }
 
 
@@ -34,5 +36,6 @@ __all__ = [
     "RuleSystem",
     "DnD5eRules",
     "CustomD6Rules",
+    "SimpleD20Rules",
     "get_ruleset",
 ]
