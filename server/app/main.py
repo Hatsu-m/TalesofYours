@@ -18,6 +18,8 @@ from .engine_service import (
     remove_companion,
     run_turn,
     submit_player_roll,
+    update_party_member,
+    update_world,
 )
 from .llm.ollama_client import list_models
 from engine.world_loader import dump_world
@@ -82,6 +84,23 @@ def get_world_endpoint(world_id: int) -> Dict[str, Any]:
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return world.model_dump()
+
+
+class WorldUpdate(BaseModel):
+    title: str | None = None
+    ruleset: str | None = None
+    lore: str | None = None
+    npcs: list[Dict[str, str]] | None = None
+    rules_notes: str | None = None
+
+
+@app.patch("/worlds/{world_id}")
+def update_world_endpoint(world_id: int, payload: WorldUpdate) -> dict[str, str]:
+    try:
+        update_world(world_id, payload.model_dump(exclude_unset=True))
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "ok"}
 
 
 class PlayerRoll(BaseModel):
@@ -155,6 +174,24 @@ def add_companion_endpoint(game_id: int, companion: CompanionPayload) -> dict[st
 def remove_companion_endpoint(game_id: int, companion_id: int) -> dict[str, str]:
     try:
         remove_companion(game_id, companion_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "ok"}
+
+
+class PartyMemberUpdate(BaseModel):
+    name: str | None = None
+    stats: Dict[str, Any] | None = None
+    inventory: list[str] | None = None
+    status: str | None = None
+
+
+@app.patch("/games/{game_id}/party/{member_id}")
+def update_party_member_endpoint(
+    game_id: int, member_id: int, payload: PartyMemberUpdate
+) -> dict[str, str]:
+    try:
+        update_party_member(game_id, member_id, payload.model_dump(exclude_unset=True))
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {"status": "ok"}

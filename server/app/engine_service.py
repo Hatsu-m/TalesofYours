@@ -10,7 +10,7 @@ from typing import Any, Dict
 
 from engine.context import build_prompt
 from engine.memory import MemoryItem, remember
-from engine.world_loader import World, load_world_from_string
+from engine.world_loader import World, SectionEntry, load_world_from_string
 from engine.rules import get_ruleset
 
 from .llm.ollama_client import generate
@@ -131,6 +131,42 @@ def remove_companion(game_id: int, companion_id: Any) -> None:
     ]
     if len(state.party) == before:
         raise KeyError(f"Unknown companion id: {companion_id}")
+
+
+def update_party_member(game_id: int, member_id: Any, updates: Dict[str, Any]) -> None:
+    """Update fields for a specific party member.
+
+    Parameters
+    ----------
+    game_id:
+        Identifier of the game state to modify.
+    member_id:
+        Identifier of the party member within the game state's ``party`` list.
+    updates:
+        Mapping of fields to merge into the member record.
+    """
+
+    state = _GAME_STATES.get(game_id)
+    if state is None:
+        raise KeyError(f"Unknown game id: {game_id}")
+    for member in state.party:
+        if member.get("id") == member_id:
+            member.update(updates)
+            return
+    raise KeyError(f"Unknown party member id: {member_id}")
+
+
+def update_world(world_id: int, updates: Dict[str, Any]) -> None:
+    """Apply partial updates to a world definition."""
+
+    world = _WORLDS.get(world_id)
+    if world is None:
+        raise KeyError(f"Unknown world id: {world_id}")
+
+    if "npcs" in updates:
+        world.npcs = [SectionEntry(**n) for n in updates.pop("npcs")]
+    for field, value in updates.items():
+        setattr(world, field, value)
 
 
 STATE_UPDATE_PREFIX = "STATE_UPDATE:"
