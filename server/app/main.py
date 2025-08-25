@@ -51,7 +51,10 @@ class WorldImport(BaseModel):
 
 @app.post("/worlds/import")
 def import_world_endpoint(payload: WorldImport) -> dict[str, int]:
-    new_id = import_world(payload.content)
+    try:
+        new_id = import_world(payload.content)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"id": new_id}
 
 
