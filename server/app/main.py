@@ -20,6 +20,7 @@ from .engine_service import (
     submit_player_roll,
     update_party_member,
     update_world,
+    update_game_state,
 )
 from .llm.ollama_client import list_models
 from engine.world_loader import dump_world
@@ -192,6 +193,22 @@ def update_party_member_endpoint(
 ) -> dict[str, str]:
     try:
         update_party_member(game_id, member_id, payload.model_dump(exclude_unset=True))
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "ok"}
+
+
+class GameUpdate(BaseModel):
+    current_location: int | None = None
+    party: list[Dict[str, Any]] | None = None
+    memory: list[Dict[str, Any]] | None = None
+    flags: Dict[str, Any] | None = None
+
+
+@app.patch("/games/{game_id}")
+def update_game_endpoint(game_id: int, payload: GameUpdate) -> dict[str, str]:
+    try:
+        update_game_state(game_id, payload.model_dump(exclude_unset=True))
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {"status": "ok"}
