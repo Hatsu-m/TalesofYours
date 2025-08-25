@@ -93,6 +93,7 @@ class WorldUpdate(BaseModel):
     lore: str | None = None
     npcs: list[Dict[str, str]] | None = None
     rules_notes: str | None = None
+    stats: list[str] | None = None
 
 
 @app.patch("/worlds/{world_id}")
@@ -195,6 +196,8 @@ def update_party_member_endpoint(
         update_party_member(game_id, member_id, payload.model_dump(exclude_unset=True))
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"status": "ok"}
 
 
@@ -211,6 +214,8 @@ def update_game_endpoint(game_id: int, payload: GameUpdate) -> dict[str, str]:
         update_game_state(game_id, payload.model_dump(exclude_unset=True))
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"status": "ok"}
 
 
