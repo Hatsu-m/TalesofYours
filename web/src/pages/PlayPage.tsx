@@ -23,6 +23,12 @@ export default function PlayPage() {
   )
 
   useEffect(() => {
+    if (gameId) {
+      localStorage.setItem('gameId', gameId)
+    }
+  }, [gameId])
+
+  useEffect(() => {
     async function loadRules() {
       const game = await fetch(`${API_BASE}/games/${gameId}`).then((r) => r.json())
       const world = await fetch(`${API_BASE}/worlds/${game.world_id}`).then((r) =>

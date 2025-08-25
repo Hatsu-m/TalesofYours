@@ -169,6 +169,23 @@ def update_world(world_id: int, updates: Dict[str, Any]) -> None:
         setattr(world, field, value)
 
 
+def update_game_state(game_id: int, updates: Dict[str, Any]) -> None:
+    """Apply partial updates to a game state."""
+
+    state = _GAME_STATES.get(game_id)
+    if state is None:
+        raise KeyError(f"Unknown game id: {game_id}")
+
+    if "current_location" in updates:
+        state.current_location = int(updates["current_location"])
+    if "party" in updates:
+        state.party = list(updates["party"])
+    if "flags" in updates:
+        state.flags.update(updates["flags"])
+    if "memory" in updates:
+        state.memory = [MemoryItem(**m) for m in updates["memory"]]
+
+
 STATE_UPDATE_PREFIX = "STATE_UPDATE:"
 
 
