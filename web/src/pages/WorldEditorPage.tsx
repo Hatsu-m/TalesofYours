@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -19,7 +19,7 @@ interface ParsedWorld {
 export default function WorldEditorPage() {
   const navigate = useNavigate()
   const [markdown, setMarkdown] = useState(
-    `---\nid: demo\ntitle: Demo World\nruleset: custom_d6\nend_goal: Have fun\n---\n\n## Lore\nDescribe your world.\n`
+    `---\nid: demo\ntitle: Demo World\nruleset: custom_d6\nend_goal: Have fun\n---\n\n## Lore\nDescribe your world.\n`,
   )
   const [preview, setPreview] = useState<ParsedWorld | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -71,7 +71,13 @@ export default function WorldEditorPage() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-gray-100 dark:bg-gray-900 dark:text-gray-100">
+    <div className="relative flex h-full flex-col bg-gray-100 dark:bg-gray-900 dark:text-gray-100">
+      <Link
+        to="/"
+        className="absolute left-2 top-2 rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-700"
+      >
+        Home
+      </Link>
       <div className="flex flex-1 flex-col md:flex-row">
         <textarea
           value={markdown}
@@ -80,7 +86,9 @@ export default function WorldEditorPage() {
         />
         <div className="flex-1 overflow-auto border border-gray-700 p-2">
           {error && <p className="text-red-500">{error}</p>}
-          {preview && <pre className="text-xs">{JSON.stringify(preview, null, 2)}</pre>}
+          {preview && (
+            <pre className="text-xs">{JSON.stringify(preview, null, 2)}</pre>
+          )}
         </div>
       </div>
       <div className="border-t border-gray-700 p-2 text-right">
