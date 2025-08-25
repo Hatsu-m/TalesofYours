@@ -24,10 +24,13 @@ def _make_world(idx: int, ruleset: str) -> None:
 def test_submit_roll_uses_world_rules(monkeypatch):
     _make_world(1, "dnd5e")
     _make_world(2, "custom_d6")
+    _make_world(3, "simple_d20")
     game_dnd = engine_service.create_game(1)
     game_d6 = engine_service.create_game(2)
+    game_d20 = engine_service.create_game(3)
     engine_service._GAME_STATES[game_dnd].pending_roll = {"id": "a", "dc": 10}
     engine_service._GAME_STATES[game_d6].pending_roll = {"id": "b", "dc": 4}
+    engine_service._GAME_STATES[game_d20].pending_roll = {"id": "c", "dc": 10}
 
     async def fake_generate(*, model, prompt):
         return "narration"
@@ -36,8 +39,11 @@ def test_submit_roll_uses_world_rules(monkeypatch):
 
     asyncio.run(engine_service.submit_player_roll(game_dnd, "a", 6, 0))
     asyncio.run(engine_service.submit_player_roll(game_d6, "b", 6, 0))
+    asyncio.run(engine_service.submit_player_roll(game_d20, "c", 10, 0))
 
     mem_dnd = engine_service._GAME_STATES[game_dnd].memory[0].content
     mem_d6 = engine_service._GAME_STATES[game_d6].memory[0].content
+    mem_d20 = engine_service._GAME_STATES[game_d20].memory[0].content
     assert "failure" in mem_dnd
     assert "success" in mem_d6
+    assert "success" in mem_d20
