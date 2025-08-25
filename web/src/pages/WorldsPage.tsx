@@ -28,13 +28,24 @@ export default function WorldsPage() {
     const file = e.target.files?.[0]
     if (!file) return
     const content = await file.text()
-    await fetch(`${API_BASE}/worlds/import`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    })
-    e.target.value = ''
-    await fetchWorlds()
+    try {
+      const res = await fetch(`${API_BASE}/worlds/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      })
+      if (!res.ok) {
+        const message = await res.text()
+        alert(`Import failed: ${message}`)
+        return
+      }
+      await fetchWorlds()
+    } catch (err) {
+      console.error(err)
+      alert('Import failed')
+    } finally {
+      e.target.value = ''
+    }
   }
 
   async function handlePlay(worldId: number) {
