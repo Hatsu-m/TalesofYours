@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage.tsx'
 import PlayPage from './pages/PlayPage.tsx'
 import WorldsPage from './pages/WorldsPage.tsx'
 import WorldEditorPage from './pages/WorldEditorPage.tsx'
+import SettingsPage from './pages/SettingsPage.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -16,6 +17,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/play/:gameId" element={<PlayPage />} />
         <Route path="/worlds" element={<WorldsPage />} />
         <Route path="/worlds/new" element={<WorldEditorPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

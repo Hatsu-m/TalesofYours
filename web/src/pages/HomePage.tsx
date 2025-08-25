@@ -13,6 +13,9 @@ export default function HomePage() {
       <Link to="/worlds" className="text-blue-500 underline">
         Browse Worlds
       </Link>
+      <Link to="/settings" className="text-blue-500 underline">
+        Settings
+      </Link>
     </div>
   )
 }

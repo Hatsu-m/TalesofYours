@@ -4,6 +4,7 @@ import ChatStream, { type ChatMessage } from '../components/ChatStream'
 import InputBar from '../components/InputBar'
 import RollPrompt, { type RollRequest } from '../components/RollPrompt'
 import RulesBadge from '../components/RulesBadge'
+import PartyPanel, { type Character } from '../components/PartyPanel'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -16,6 +17,10 @@ export default function PlayPage() {
     instructions: string
   } | null>(null)
   const [worldTitle, setWorldTitle] = useState<string | null>(null)
+  const [party, setParty] = useState<Character[]>([])
+  const [model] = useState<string>(
+    () => localStorage.getItem('model') ?? 'llama3',
+  )
 
   useEffect(() => {
     async function loadRules() {
@@ -23,6 +28,7 @@ export default function PlayPage() {
       const world = await fetch(`${API_BASE}/worlds/${game.world_id}`).then((r) =>
         r.json(),
       )
+      setParty(game.party ?? [])
       const map: Record<string, { label: string; instructions: string }> = {
         dnd5e: {
           label: 'D&D 5e',
@@ -53,7 +59,7 @@ export default function PlayPage() {
       const resp = await fetch(`${API_BASE}/games/${gameId}/turn`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, model }),
       })
       if (!resp.ok) throw new Error('request failed')
       const data = await resp.json()
@@ -136,6 +142,12 @@ export default function PlayPage() {
       >
         Home
       </Link>
+      <Link
+        to="/settings"
+        className="absolute right-2 top-2 rounded bg-gray-700 px-2 py-1 text-white hover:bg-gray-800"
+      >
+        Settings
+      </Link>
       {rulesInfo && (
         <RulesBadge
           name={rulesInfo.label}
@@ -160,7 +172,7 @@ export default function PlayPage() {
         />
       </main>
       <aside className="hidden w-64 border-l border-gray-700 p-4 pt-10 md:block">
-        {/* Right Panel */}
+        <PartyPanel party={party} />
       </aside>
     </div>
   )
