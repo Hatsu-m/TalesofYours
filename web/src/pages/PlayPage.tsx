@@ -20,6 +20,7 @@ export default function PlayPage() {
     instructions: string
   } | null>(null)
   const [worldTitle, setWorldTitle] = useState<string | null>(null)
+  const [worldId, setWorldId] = useState<string | null>(null)
   const [party, setParty] = useState<Character[]>([])
   const [showCreator, setShowCreator] = useState(false)
   const [statKeys, setStatKeys] = useState<string[]>([])
@@ -34,13 +35,14 @@ export default function PlayPage() {
   }, [gameId])
 
   useEffect(() => {
-    async function loadRules() {
-      const game = await fetch(`${API_BASE}/games/${gameId}`).then((r) => r.json())
-      const world = await fetch(`${API_BASE}/worlds/${game.world_id}`).then((r) =>
-        r.json(),
-      )
-      setParty(game.party ?? [])
-      setStatKeys(world.stats ?? [])
+      async function loadRules() {
+        const game = await fetch(`${API_BASE}/games/${gameId}`).then((r) => r.json())
+        const world = await fetch(`${API_BASE}/worlds/${game.world_id}`).then((r) =>
+          r.json(),
+        )
+        setParty(game.party ?? [])
+        setStatKeys(world.stats ?? [])
+        setWorldId(game.world_id)
       const map: Record<string, { label: string; instructions: string }> = {
         dnd5e: {
           label: 'D&D 5e',
@@ -130,6 +132,36 @@ export default function PlayPage() {
     }
   }
 
+  async function saveGame() {
+    if (!gameId) return
+    const resp = await fetch(`${API_BASE}/games/${gameId}/save`)
+    if (!resp.ok) return
+    const data = await resp.json()
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json',
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `game-${gameId}-save.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function exportWorld() {
+    if (!worldId) return
+    const resp = await fetch(`${API_BASE}/worlds/${worldId}/export`)
+    if (!resp.ok) return
+    const text = await resp.text()
+    const blob = new Blob([text], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `world-${worldId}-export.md`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   function handleCommand(cmd: string) {
     switch (cmd) {
       case 'save':
@@ -170,7 +202,20 @@ export default function PlayPage() {
         {worldTitle && (
           <div className="text-sm font-semibold">Story: {worldTitle}</div>
         )}
-        {/* Left Panel */}
+        <div className="mt-4 flex flex-col space-y-2">
+          <button
+            onClick={saveGame}
+            className="rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-700"
+          >
+            Save
+          </button>
+          <button
+            onClick={exportWorld}
+            className="rounded bg-gray-700 px-2 py-1 text-white hover:bg-gray-800"
+          >
+            Export
+          </button>
+        </div>
       </aside>
       <main className="flex flex-1 flex-col">
         <ChatStream messages={messages} />
