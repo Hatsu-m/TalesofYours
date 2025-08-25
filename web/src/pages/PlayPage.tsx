@@ -15,6 +15,7 @@ export default function PlayPage() {
     label: string
     instructions: string
   } | null>(null)
+  const [worldTitle, setWorldTitle] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadRules() {
@@ -35,6 +36,7 @@ export default function PlayPage() {
         },
       }
       setRulesInfo(map[world.ruleset])
+      setWorldTitle(world.title)
     }
     loadRules()
   }, [gameId])
@@ -140,8 +142,11 @@ export default function PlayPage() {
           description={rulesInfo.instructions}
         />
       )}
-      <aside className="hidden w-64 border-r border-gray-700 p-4 md:block">
-        Left Panel
+      <aside className="hidden w-64 border-r border-gray-700 p-4 pt-10 md:block">
+        {worldTitle && (
+          <div className="text-sm font-semibold">Story: {worldTitle}</div>
+        )}
+        {/* Left Panel */}
       </aside>
       <main className="flex flex-1 flex-col">
         <ChatStream messages={messages} />
@@ -154,8 +159,8 @@ export default function PlayPage() {
           disabled={!!pendingRoll}
         />
       </main>
-      <aside className="hidden w-64 border-l border-gray-700 p-4 md:block">
-        Right Panel
+      <aside className="hidden w-64 border-l border-gray-700 p-4 pt-10 md:block">
+        {/* Right Panel */}
       </aside>
     </div>
   )
