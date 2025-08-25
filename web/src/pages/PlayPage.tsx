@@ -5,6 +5,8 @@ import InputBar from '../components/InputBar'
 import RollPrompt, { type RollRequest } from '../components/RollPrompt'
 import RulesBadge from '../components/RulesBadge'
 
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+
 export default function PlayPage() {
   const { gameId } = useParams()
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -16,8 +18,8 @@ export default function PlayPage() {
 
   useEffect(() => {
     async function loadRules() {
-      const game = await fetch(`/games/${gameId}`).then((r) => r.json())
-      const world = await fetch(`/worlds/${game.world_id}`).then((r) =>
+      const game = await fetch(`${API_BASE}/games/${gameId}`).then((r) => r.json())
+      const world = await fetch(`${API_BASE}/worlds/${game.world_id}`).then((r) =>
         r.json(),
       )
       const map: Record<string, { label: string; instructions: string }> = {
@@ -46,7 +48,7 @@ export default function PlayPage() {
     setMessages((prev) => [...prev, playerMsg])
 
     try {
-      const resp = await fetch(`/games/${gameId}/turn`, {
+      const resp = await fetch(`${API_BASE}/games/${gameId}/turn`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
@@ -82,7 +84,7 @@ export default function PlayPage() {
       content: `Roll ${value}${mod ? ` + ${mod}` : ''}`,
     }
     setMessages((prev) => [...prev, playerMsg])
-    const resp = await fetch(`/games/${gameId}/player-roll`, {
+    const resp = await fetch(`${API_BASE}/games/${gameId}/player-roll`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
