@@ -1,8 +1,8 @@
 import { useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import ChatStream, { ChatMessage } from '../components/ChatStream'
+import ChatStream, { type ChatMessage } from '../components/ChatStream'
 import InputBar from '../components/InputBar'
-import RollPrompt, { RollRequest } from '../components/RollPrompt'
+import RollPrompt, { type RollRequest } from '../components/RollPrompt'
 import RulesBadge from '../components/RulesBadge'
 
 export default function PlayPage() {
