@@ -4,7 +4,9 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 
 type Path = keyof paths;
 
-type Method<P extends Path> = keyof paths[P];
+// Ensure method type is narrowed to strings so we can safely call string methods
+// on it. `keyof` may include number or symbol, so we explicitly extract strings.
+type Method<P extends Path> = Extract<keyof paths[P], string>;
 
 type RequestBody<P extends Path, M extends Method<P>> =
   paths[P][M] extends { requestBody: { content: { 'application/json': infer B } } }
