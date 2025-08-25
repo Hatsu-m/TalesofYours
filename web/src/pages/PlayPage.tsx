@@ -5,6 +5,9 @@ import InputBar from '../components/InputBar'
 import RollPrompt, { type RollRequest } from '../components/RollPrompt'
 import RulesBadge from '../components/RulesBadge'
 import PartyPanel, { type Character } from '../components/PartyPanel'
+import CreateCharacterForm, {
+  type NewCharacter,
+} from '../components/CreateCharacterForm'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -18,6 +21,7 @@ export default function PlayPage() {
   } | null>(null)
   const [worldTitle, setWorldTitle] = useState<string | null>(null)
   const [party, setParty] = useState<Character[]>([])
+  const [showCreator, setShowCreator] = useState(false)
   const [model] = useState<string>(
     () => localStorage.getItem('model') ?? 'llama3',
   )
@@ -178,7 +182,26 @@ export default function PlayPage() {
         />
       </main>
       <aside className="hidden w-64 border-l border-gray-700 p-4 pt-10 md:block">
-        <PartyPanel party={party} />
+        {party.length === 0 ? (
+          showCreator ? (
+            <CreateCharacterForm
+              gameId={gameId!}
+              onCreated={(c: NewCharacter) => {
+                setParty([c])
+                setShowCreator(false)
+              }}
+            />
+          ) : (
+            <button
+              onClick={() => setShowCreator(true)}
+              className="rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-700"
+            >
+              Create Character
+            </button>
+          )
+        ) : (
+          <PartyPanel party={party} />
+        )}
       </aside>
     </div>
   )
