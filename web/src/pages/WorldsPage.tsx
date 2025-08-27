@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL ?? window.location.origin
 
 interface WorldSummary {
   id: number
@@ -46,7 +46,12 @@ export default function WorldsPage() {
       await importFile(file)
     } catch (err) {
       console.error(err)
-      alert('Import failed')
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg === 'Failed to fetch') {
+        alert(`Import failed: could not reach server at ${API_BASE}. Is it running?`)
+      } else {
+        alert(`Import failed: ${msg}`)
+      }
     } finally {
       e.target.value = ''
     }
@@ -58,7 +63,12 @@ export default function WorldsPage() {
     if (file) {
       importFile(file).catch((err) => {
         console.error(err)
-        alert('Import failed')
+        const msg = err instanceof Error ? err.message : String(err)
+        if (msg === 'Failed to fetch') {
+          alert(`Import failed: could not reach server at ${API_BASE}. Is it running?`)
+        } else {
+          alert(`Import failed: ${msg}`)
+        }
       })
     }
   }
