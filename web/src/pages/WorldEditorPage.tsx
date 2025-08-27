@@ -53,21 +53,33 @@ export default function WorldEditorPage() {
   }, [markdown])
 
   async function handleSave() {
-    const res = await fetch(`${API_BASE}/worlds/import`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: markdown }),
-    })
-    if (!res.ok) return
-    const { id: worldId } = await res.json()
-    const res2 = await fetch(`${API_BASE}/games`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ world_id: worldId }),
-    })
-    if (!res2.ok) return
-    const { id: gameId } = await res2.json()
-    navigate(`/play/${gameId}`)
+    try {
+      const res = await fetch(`${API_BASE}/worlds/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: markdown }),
+      })
+      if (!res.ok) {
+        const msg = await res.text()
+        throw new Error(msg || 'world import failed')
+      }
+      const { id: worldId } = await res.json()
+      const res2 = await fetch(`${API_BASE}/games`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ world_id: worldId }),
+      })
+      if (!res2.ok) {
+        const msg = await res2.text()
+        throw new Error(msg || 'game creation failed')
+      }
+      const { id: gameId } = await res2.json()
+      navigate(`/play/${gameId}`)
+    } catch (err) {
+      console.error(err)
+      const msg = err instanceof Error ? err.message : String(err)
+      alert(`Import failed: ${msg}`)
+    }
   }
 
   return (
