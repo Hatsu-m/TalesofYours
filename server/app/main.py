@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import httpx
 from pydantic import BaseModel
 from typing import Any, Dict
+import logging
 
 from .engine_service import (
     DMResponse,
@@ -25,6 +26,7 @@ from .engine_service import (
 from .llm.ollama_client import list_models
 from engine.world_loader import dump_world
 
+logger = logging.getLogger(__name__)
 app = FastAPI()
 
 app.add_middleware(
@@ -64,7 +66,8 @@ class WorldImport(BaseModel):
 def import_world_endpoint(payload: WorldImport) -> dict[str, int]:
     try:
         new_id = import_world(payload.content)
-    except ValueError as exc:
+    except Exception as exc:  # pragma: no cover - logging path
+        logger.exception("world import failed")
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"id": new_id}
 
@@ -73,7 +76,8 @@ def import_world_endpoint(payload: WorldImport) -> dict[str, int]:
 def validate_world_endpoint(payload: WorldImport) -> Dict[str, Any]:
     try:
         world = validate_world(payload.content)
-    except ValueError as exc:
+    except Exception as exc:  # pragma: no cover - logging path
+        logger.exception("world validation failed")
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return world.model_dump()
 
@@ -233,7 +237,11 @@ class GameImport(BaseModel):
 
 @app.post("/games/import")
 def import_game(payload: GameImport) -> Dict[str, int]:
-    new_id = import_game_state(payload.state)
+    try:
+        new_id = import_game_state(payload.state)
+    except Exception as exc:  # pragma: no cover - logging path
+        logger.exception("game import failed")
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"id": new_id}
 
 

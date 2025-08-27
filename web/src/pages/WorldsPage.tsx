@@ -46,7 +46,8 @@ export default function WorldsPage() {
       await importFile(file)
     } catch (err) {
       console.error(err)
-      alert('Import failed')
+      const msg = err instanceof Error ? err.message : String(err)
+      alert(`Import failed: ${msg}`)
     } finally {
       e.target.value = ''
     }
@@ -58,7 +59,8 @@ export default function WorldsPage() {
     if (file) {
       importFile(file).catch((err) => {
         console.error(err)
-        alert('Import failed')
+        const msg = err instanceof Error ? err.message : String(err)
+        alert(`Import failed: ${msg}`)
       })
     }
   }
