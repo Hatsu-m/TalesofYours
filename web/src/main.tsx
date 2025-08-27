@@ -5,7 +5,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import HomePage from './pages/HomePage.tsx'
 import PlayPage from './pages/PlayPage.tsx'
-import WorldsPage from './pages/WorldsPage.tsx'
+import WorldListPage from './pages/WorldListPage.tsx'
 import WorldEditorPage from './pages/WorldEditorPage.tsx'
 import SettingsPage from './pages/SettingsPage.tsx'
 
@@ -15,7 +15,7 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/play/:gameId" element={<PlayPage />} />
-        <Route path="/worlds" element={<WorldsPage />} />
+        <Route path="/worlds" element={<WorldListPage />} />
         <Route path="/worlds/new" element={<WorldEditorPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>

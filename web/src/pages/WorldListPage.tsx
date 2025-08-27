@@ -9,7 +9,7 @@ interface WorldSummary {
   ruleset: string
 }
 
-export default function WorldsPage() {
+export default function WorldListPage() {
   const navigate = useNavigate()
   const [worlds, setWorlds] = useState<WorldSummary[]>([])
 
