@@ -14,7 +14,10 @@ _THINK_END = "</think>"
 
 def _strip_thinking_tags(text: str) -> str:
     """Remove `<think>` sections from ``text``."""
-    pattern = re.compile(rf"{re.escape(_THINK_START)}.*?{re.escape(_THINK_END)}", re.DOTALL)
+    pattern = re.compile(
+        rf"{re.escape(_THINK_START)}.*?{re.escape(_THINK_END)}",
+        re.DOTALL,
+    )
     return re.sub(pattern, "", text)
 
 
