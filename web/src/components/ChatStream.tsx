@@ -23,6 +23,9 @@ export default function ChatStream({ messages }: Props) {
               msg.role === 'player' ? 'text-blue-200' : 'text-gray-100'
             }`}
           >
+            <span className="font-semibold">
+              {msg.role === 'player' ? 'Player' : 'DM'}:
+            </span>{' '}
             {msg.content}
           </div>
         )}
