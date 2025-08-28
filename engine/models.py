@@ -19,6 +19,8 @@ class Stats(BaseModel):
     hp: int = 0
     strength: int = 0
     defense: int = 0
+    hunger: int = 10
+    thirst: int = 10
 
 
 class WorldMeta(Base):
@@ -123,6 +125,8 @@ class GameState(Base):
     timeline: Mapped[List[str]] = mapped_column(JSON, default=list)
     memory: Mapped[List[str]] = mapped_column(JSON, default=list)
     pending_roll: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    elapsed_time: Mapped[float] = mapped_column(default=0.0)
+    last_needs_update: Mapped[float] = mapped_column(default=0.0)
 
     def add_companion(self, companion: Dict[str, Any]) -> None:
         """Add a companion to the party enforcing a limit of three."""

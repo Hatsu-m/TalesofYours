@@ -11,6 +11,8 @@ class Stats(BaseModel):
     hp: int = 0
     strength: int = 0
     defense: int = 0
+    hunger: int = 10
+    thirst: int = 10
 
 
 class WorldMeta(BaseModel):
@@ -88,5 +90,7 @@ class GameState(BaseModel):
     timeline: List[str]
     memory: List[str]
     pending_roll: Dict[str, Any] | None = None
+    elapsed_time: float = 0.0
+    last_needs_update: float = 0.0
 
     model_config = ConfigDict(from_attributes=True)

@@ -27,6 +27,13 @@ SAVE_DIR.mkdir(exist_ok=True)
 _GAME_STATES: dict[int, "GameState"] = {}
 _WORLDS: dict[int, World] = {}
 
+MAX_HUNGER = 10
+MAX_THIRST = 10
+HUNGER_DECAY_SECONDS = 3600
+THIRST_DECAY_SECONDS = 1800
+NEEDS_DAMAGE = 1
+TURN_TIME_SECONDS = 60
+
 
 def _validate_stats(world: World, stats: Dict[str, Any]) -> None:
     """Ensure stats conform to world configuration and ruleset limits."""
@@ -34,7 +41,7 @@ def _validate_stats(world: World, stats: Dict[str, Any]) -> None:
     allowed = set(world.stats)
     max_bonus = getattr(get_ruleset(world.ruleset), "MAX_BONUS", None)
     for key, value in stats.items():
-        if key == "hp":
+        if key in {"hp", "hunger", "thirst"}:
             continue
         if allowed and key not in allowed:
             raise ValueError(f"unknown stat: {key}")
@@ -53,6 +60,8 @@ class GameState:
     timeline: list[str] = field(default_factory=list)
     memory: list[MemoryItem] = field(default_factory=list)
     pending_roll: Dict[str, Any] | None = None
+    elapsed_time: float = 0.0
+    last_needs_update: float = 0.0
 
     def add_companion(self, companion: dict[str, Any]) -> None:
         """Add a companion to the party enforcing a maximum of three."""
@@ -71,6 +80,54 @@ class GameState:
             raise ValueError("party already has maximum pets")
         data = {"type": "pet", **pet}
         self.party.append(data)
+
+
+def _update_survival_needs(state: GameState, now: float | None = None) -> None:
+    """Update hunger and thirst based on elapsed in-game time."""
+
+    if now is None:
+        now = state.elapsed_time
+    elapsed = now - state.last_needs_update
+    hunger_ticks = int(elapsed // HUNGER_DECAY_SECONDS)
+    thirst_ticks = int(elapsed // THIRST_DECAY_SECONDS)
+    if hunger_ticks == 0 and thirst_ticks == 0:
+        return
+
+    for member in state.party:
+        stats = member.setdefault("stats", {})
+        hunger = stats.get("hunger", MAX_HUNGER)
+        thirst = stats.get("thirst", MAX_THIRST)
+
+        new_hunger = max(hunger - hunger_ticks, 0)
+        hunger_damage = max(hunger_ticks - hunger, 0)
+
+        new_thirst = max(thirst - thirst_ticks, 0)
+        thirst_damage = max(thirst_ticks - thirst, 0)
+
+        stats["hunger"] = new_hunger
+        stats["thirst"] = new_thirst
+
+        total_damage = (hunger_damage + thirst_damage) * NEEDS_DAMAGE
+        if total_damage:
+            stats["hp"] = stats.get("hp", 0) - total_damage
+
+    state.last_needs_update = now
+
+
+def _advance_time(state: GameState, seconds: float) -> None:
+    """Advance in-game time and update survival needs."""
+
+    state.elapsed_time += seconds
+    _update_survival_needs(state)
+
+
+def advance_time(game_id: int, seconds: float) -> None:
+    """Public API to advance time for a game."""
+
+    state = _GAME_STATES.get(game_id)
+    if state is None:
+        raise KeyError(f"Unknown game id: {game_id}")
+    _advance_time(state, seconds)
 
 
 def list_worlds() -> list[dict[str, Any]]:
@@ -118,7 +175,10 @@ def create_game(world_id: int) -> int:
 
 def get_game_state(game_id: int) -> Dict[str, Any]:
     """Return the serialisable state for a game."""
-
+    state = _GAME_STATES.get(game_id)
+    if state is None:
+        raise KeyError(f"Unknown game id: {game_id}")
+    _update_survival_needs(state)
     return export_game_state(game_id)
 
 
@@ -128,6 +188,7 @@ def add_companion(game_id: int, companion: Dict[str, Any]) -> None:
     state = _GAME_STATES.get(game_id)
     if state is None:
         raise KeyError(f"Unknown game id: {game_id}")
+    _update_survival_needs(state)
     world = _WORLDS[state.world_id]
     stats = companion.get("stats")
     if stats:
@@ -141,6 +202,7 @@ def remove_companion(game_id: int, companion_id: Any) -> None:
     state = _GAME_STATES.get(game_id)
     if state is None:
         raise KeyError(f"Unknown game id: {game_id}")
+    _update_survival_needs(state)
     before = len(state.party)
     state.party = [
         m
@@ -167,14 +229,48 @@ def update_party_member(game_id: int, member_id: Any, updates: Dict[str, Any]) -
     state = _GAME_STATES.get(game_id)
     if state is None:
         raise KeyError(f"Unknown game id: {game_id}")
+    _update_survival_needs(state)
     for member in state.party:
         if member.get("id") == member_id:
             if "stats" in updates:
                 world = _WORLDS[state.world_id]
                 stats_update = updates.pop("stats") or {}
                 _validate_stats(world, stats_update)
-                member.setdefault("stats", {}).update(stats_update)
+                stats = member.setdefault("stats", {})
+                stats.update(stats_update)
+                stats["hunger"] = min(stats.get("hunger", MAX_HUNGER), MAX_HUNGER)
+                stats["thirst"] = min(stats.get("thirst", MAX_THIRST), MAX_THIRST)
             member.update(updates)
+            return
+    raise KeyError(f"Unknown party member id: {member_id}")
+
+
+def feed_member(game_id: int, member_id: Any, amount: int = MAX_HUNGER) -> None:
+    """Increase a party member's hunger level."""
+
+    state = _GAME_STATES.get(game_id)
+    if state is None:
+        raise KeyError(f"Unknown game id: {game_id}")
+    _update_survival_needs(state)
+    for member in state.party:
+        if member.get("id") == member_id:
+            stats = member.setdefault("stats", {})
+            stats["hunger"] = min(stats.get("hunger", MAX_HUNGER) + amount, MAX_HUNGER)
+            return
+    raise KeyError(f"Unknown party member id: {member_id}")
+
+
+def hydrate_member(game_id: int, member_id: Any, amount: int = MAX_THIRST) -> None:
+    """Increase a party member's thirst level."""
+
+    state = _GAME_STATES.get(game_id)
+    if state is None:
+        raise KeyError(f"Unknown game id: {game_id}")
+    _update_survival_needs(state)
+    for member in state.party:
+        if member.get("id") == member_id:
+            stats = member.setdefault("stats", {})
+            stats["thirst"] = min(stats.get("thirst", MAX_THIRST) + amount, MAX_THIRST)
             return
     raise KeyError(f"Unknown party member id: {member_id}")
 
@@ -198,6 +294,7 @@ def update_game_state(game_id: int, updates: Dict[str, Any]) -> None:
     state = _GAME_STATES.get(game_id)
     if state is None:
         raise KeyError(f"Unknown game id: {game_id}")
+    _update_survival_needs(state)
 
     if "current_location" in updates:
         state.current_location = int(updates["current_location"])
@@ -208,6 +305,8 @@ def update_game_state(game_id: int, updates: Dict[str, Any]) -> None:
             stats = member.get("stats")
             if stats:
                 _validate_stats(world, stats)
+                stats["hunger"] = min(stats.get("hunger", MAX_HUNGER), MAX_HUNGER)
+                stats["thirst"] = min(stats.get("thirst", MAX_THIRST), MAX_THIRST)
         state.party = party
     if "flags" in updates:
         state.flags.update(updates["flags"])
@@ -228,7 +327,10 @@ def _apply_state_updates(state: GameState, updates: Dict[str, Any]) -> None:
                 if "stats" in member_update:
                     world = _WORLDS[state.world_id]
                     _validate_stats(world, member_update["stats"])
-                    member.setdefault("stats", {}).update(member_update["stats"])
+                    stats = member.setdefault("stats", {})
+                    stats.update(member_update["stats"])
+                    stats["hunger"] = min(stats.get("hunger", MAX_HUNGER), MAX_HUNGER)
+                    stats["thirst"] = min(stats.get("thirst", MAX_THIRST), MAX_THIRST)
                 if "inventory" in member_update:
                     inv_update = member_update["inventory"]
                     inventory = member.setdefault("inventory", [])
@@ -304,6 +406,8 @@ def _deserialize_game_state(data: Dict[str, Any]) -> GameState:
         timeline=list(data.get("timeline", [])),
         memory=memory,
         pending_roll=data.get("pending_roll"),
+        elapsed_time=float(data.get("elapsed_time", 0.0)),
+        last_needs_update=float(data.get("last_needs_update", 0.0)),
     )
 
 
@@ -322,6 +426,8 @@ def export_game_state(game_id: int) -> Dict[str, Any]:
         "timeline": state.timeline,
         "memory": [m.model_dump() for m in state.memory],
         "pending_roll": state.pending_roll,
+        "elapsed_time": state.elapsed_time,
+        "last_needs_update": state.last_needs_update,
     }
 
 
@@ -369,6 +475,7 @@ async def run_turn(
     state = _GAME_STATES.get(game_id)
     if state is None:
         raise KeyError(f"Unknown game id: {game_id}")
+    _advance_time(state, TURN_TIME_SECONDS)
 
     world = _WORLDS.get(state.world_id)
     if world is None:
@@ -437,6 +544,8 @@ async def submit_player_roll(
     pending = state.pending_roll
     if not pending or pending.get("id") != request_id:
         raise ValueError("No matching pending roll")
+
+    _update_survival_needs(state)
 
     world = _WORLDS.get(state.world_id)
     if world is None:
