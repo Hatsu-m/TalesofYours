@@ -74,5 +74,16 @@ pnpm install
 pnpm dev
 ```
 
+## Contributing
+
+Contributions are welcome! Before submitting a pull request, ensure the code is formatted and the tests pass locally:
+
+```bash
+pre-commit run --all-files
+pytest
+```
+
+The project uses `pre-commit` for linting and formatting and `pytest` for backend tests. Frontend code is checked through `pnpm lint` and `pnpm typecheck` hooks.
+
 ## License
 Released under the MIT License.
