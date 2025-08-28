@@ -22,7 +22,7 @@ Tales Of Yours is a local-first, AI-powered tabletop RPG engine that gives you a
 **Steps**
 1. Clone the repository and enter it:
    ```powershell
-   git clone <repository-url>
+   git clone https://github.com/Hatsu-m/TalesofYours.git
    cd TalesofYours
    ```
 2. Backend setup:
@@ -51,7 +51,7 @@ Tales Of Yours is a local-first, AI-powered tabletop RPG engine that gives you a
 **Steps**
 1. Clone the repository and enter it:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Hatsu-m/TalesofYours.git
    cd TalesofYours
    ```
 2. Start backend and frontend together:
