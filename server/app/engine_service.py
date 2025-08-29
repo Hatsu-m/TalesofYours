@@ -511,6 +511,10 @@ SYSTEM_INSTRUCTIONS = (
     "You are a fair and impartial DM. "
     "Describe the world and the results of actions, "
     "but never roll for the player. "
+    "When a roll is required, ask the player to roll and wait for their response "
+    "before narrating outcomes. "
+    "If an attack hits, have the player roll for damage instead of rolling it "
+    "yourself. "
     "Resolve companion and pet actions internally without requesting player rolls. "
     "Whenever the player must choose a next step, present three logical, numbered "
     "options and note that they may always suggest another action. "
@@ -563,14 +567,28 @@ async def run_turn(
     # Attempt to detect roll requests.  This module is introduced in a
     # later phase of development, so we fail gracefully if it is missing.
     try:  # pragma: no cover - simple optional dependency shim
-        from engine.mechanics import detect_roll_request
+        from engine import mechanics
     except Exception:  # pragma: no cover - executed only when module absent
 
-        def detect_roll_request(_: str) -> Dict[str, Any] | None:
-            return None
+        class _MechanicsFallback:
+            @staticmethod
+            def detect_roll_request(_: str) -> Dict[str, Any] | None:
+                return None
 
-    roll_request_obj = detect_roll_request(narration)
+            _ROLL_RE = None
+
+        mechanics = _MechanicsFallback()
+
+    roll_request_obj = mechanics.detect_roll_request(narration)
     if roll_request_obj:
+        roll_re = getattr(mechanics, "_ROLL_RE", None)
+        if roll_re:
+            match = roll_re.search(narration)
+            if match:
+                end = match.end()
+                while end < len(narration) and narration[end] in ".!? ":
+                    end += 1
+                narration = narration[:end].rstrip()
         roll_request = roll_request_obj.model_dump()
         roll_request["id"] = str(uuid.uuid4())
         awaiting_player_roll = True
@@ -644,14 +662,28 @@ async def submit_player_roll(
     narration = _extract_state_updates(state, narration)
 
     try:  # pragma: no cover - optional dependency shim
-        from engine.mechanics import detect_roll_request
+        from engine import mechanics
     except Exception:  # pragma: no cover - executed only when module absent
 
-        def detect_roll_request(_: str) -> Dict[str, Any] | None:
-            return None
+        class _MechanicsFallback:
+            @staticmethod
+            def detect_roll_request(_: str) -> Dict[str, Any] | None:
+                return None
 
-    roll_request_obj = detect_roll_request(narration)
+            _ROLL_RE = None
+
+        mechanics = _MechanicsFallback()
+
+    roll_request_obj = mechanics.detect_roll_request(narration)
     if roll_request_obj:
+        roll_re = getattr(mechanics, "_ROLL_RE", None)
+        if roll_re:
+            match = roll_re.search(narration)
+            if match:
+                end = match.end()
+                while end < len(narration) and narration[end] in ".!? ":
+                    end += 1
+                narration = narration[:end].rstrip()
         roll_request = roll_request_obj.model_dump()
         roll_request["id"] = str(uuid.uuid4())
         awaiting_player_roll = True
