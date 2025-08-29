@@ -20,3 +20,12 @@ def test_detects_roll_request():
 def test_no_roll_request():
     text = "The dragon snarls and watches you carefully."
     assert mechanics.detect_roll_request(text) is None
+
+
+def test_detects_damage_roll_request():
+    text = "Roll 1d8 damage"
+    req = mechanics.detect_roll_request(text)
+    assert req is not None
+    assert req.sides == 8
+    assert req.skill == "Damage"
+    assert req.dc is None

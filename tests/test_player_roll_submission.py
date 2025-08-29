@@ -15,7 +15,7 @@ from engine.world_loader import World, SectionEntry
 
 def test_player_roll_submission(monkeypatch):
     responses = [
-        "You look around. Roll a d20 for Perception (DC 10).",
+        "You look around. Roll a d20 for Perception (DC 10). You rolled 5 and fail.",
         "You spot a hidden door.",
     ]
 
@@ -38,8 +38,9 @@ def test_player_roll_submission(monkeypatch):
         world_id=1, current_location=0
     )
 
-    asyncio.run(engine_service.run_turn(1, "look"))
+    resp = asyncio.run(engine_service.run_turn(1, "look"))
 
+    assert resp.message == "You look around. Roll a d20 for Perception (DC 10)."
     pending = engine_service._GAME_STATES[1].pending_roll
     assert pending is not None
 

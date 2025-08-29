@@ -17,8 +17,8 @@ class RollRequest(BaseModel):
 
 
 _ROLL_RE = re.compile(
-    r"roll\s+(?:a|an)?\s*d(?P<die>\d+)\s+for\s+"
-    r"(?P<skill>[^()]+)"
+    r"roll\s+(?:a|an)?\s*(?P<count>\d*)d(?P<die>\d+)"
+    r"(?:\s+for\s+(?P<skill>[^()]+)|\s+(?P<damage>damage))?"
     r"(?:\s*\(dc\s*(?P<dc>\d+)\))?",
     re.IGNORECASE,
 )
@@ -43,7 +43,13 @@ def detect_roll_request(dm_text: str) -> Optional[RollRequest]:
         return None
 
     sides = int(match.group("die"))
-    skill = match.group("skill").strip().title()
+    skill_raw = match.group("skill")
+    if skill_raw:
+        skill = skill_raw.strip().title()
+    elif match.group("damage"):
+        skill = "Damage"
+    else:
+        skill = "Check"
     dc_str = match.group("dc")
     dc = int(dc_str) if dc_str is not None else None
 
