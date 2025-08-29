@@ -1,4 +1,6 @@
 import { Virtuoso } from 'react-virtuoso'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export type ChatMessage = {
   id: string
@@ -18,16 +20,14 @@ export default function ChatStream({ messages }: Props) {
         followOutput="smooth"
         className="p-4"
         itemContent={(_, msg) => (
-          <div
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
             className={`mb-2 whitespace-pre-wrap ${
               msg.role === 'player' ? 'text-blue-200' : 'text-gray-100'
             }`}
           >
-            <span className="font-semibold">
-              {msg.role === 'player' ? 'Player' : 'DM'}:
-            </span>{' '}
-            {msg.content}
-          </div>
+            {`**${msg.role === 'player' ? 'Player' : 'DM'}:** ${msg.content}`}
+          </ReactMarkdown>
         )}
       />
     </div>
