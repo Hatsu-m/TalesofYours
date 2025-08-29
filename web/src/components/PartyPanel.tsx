@@ -1,5 +1,3 @@
-import React from 'react'
-
 export interface Character {
   id: number | string
   name: string

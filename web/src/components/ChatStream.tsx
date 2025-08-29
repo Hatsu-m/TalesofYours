@@ -20,14 +20,15 @@ export default function ChatStream({ messages }: Props) {
         followOutput="smooth"
         className="p-4"
         itemContent={(_, msg) => (
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
+          <div
             className={`mb-2 whitespace-pre-wrap ${
               msg.role === 'player' ? 'text-blue-200' : 'text-gray-100'
             }`}
           >
-            {`**${msg.role === 'player' ? 'Player' : 'DM'}:** ${msg.content}`}
-          </ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {`**${msg.role === 'player' ? 'Player' : 'DM'}:** ${msg.content}`}
+            </ReactMarkdown>
+          </div>
         )}
       />
     </div>
