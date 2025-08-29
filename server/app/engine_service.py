@@ -31,8 +31,8 @@ def _extract_numbered_options(text: str) -> list[str]:
     return options
 
 
-SAVE_DIR = Path("saves")
-SAVE_DIR.mkdir(exist_ok=True)
+SAVE_DIR = Path(__file__).resolve().parents[2] / "saves"
+SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # In-memory storage used as a temporary stand‑in for a database.  The

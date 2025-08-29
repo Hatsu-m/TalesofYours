@@ -20,6 +20,7 @@ from .engine_service import (
     remove_companion,
     run_turn,
     submit_player_roll,
+    load_autosave,
     update_party_member,
     update_world,
     update_game_state,
@@ -229,6 +230,15 @@ def save_game(game_id: int) -> dict[str, str]:
     try:
         autosave_game_state(game_id)
     except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "ok"}
+
+
+@app.post("/games/{game_id}/load")
+def load_game(game_id: int) -> dict[str, str]:
+    try:
+        load_autosave(game_id)
+    except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {"status": "ok"}
 

@@ -55,18 +55,28 @@ def test_save_export_import_flow(tmp_path, monkeypatch):
     path.write_text(md_text)
     engine_service._WORLDS[1] = load_world(path)
 
-    # Import game state
+    # Load game state from autosave
+    resp_load = client.post("/games/1/load")
+    assert resp_load.status_code == 200
+    assert engine_service._GAME_STATES[1].pending_roll == saved["pending_roll"]
+
+    # Resume play from loaded state
+    async def fake_generate(*, model, prompt):
+        return "Resumed."
+
+    monkeypatch.setattr(engine_service, "generate", fake_generate)
+    result = asyncio.run(engine_service.run_turn(1, "hello"))
+    assert result.message == "Resumed."
+    assert engine_service._GAME_STATES[1].pending_roll is None
+
+    # Wipe game state again and import from exported data
+    engine_service._GAME_STATES.clear()
     resp_import = client.post("/games/import", json={"state": saved})
     assert resp_import.status_code == 200
     new_id = resp_import.json()["id"]
     assert new_id == 1
     assert engine_service._GAME_STATES[new_id].pending_roll == saved["pending_roll"]
 
-    # Resume play
-    async def fake_generate(*, model, prompt):
-        return "Resumed."
-
-    monkeypatch.setattr(engine_service, "generate", fake_generate)
     result = asyncio.run(engine_service.run_turn(new_id, "hello"))
     assert result.message == "Resumed."
     assert engine_service._GAME_STATES[new_id].pending_roll is None
