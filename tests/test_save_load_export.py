@@ -27,8 +27,15 @@ def test_save_export_import_flow(tmp_path, monkeypatch):
 
     client = TestClient(app)
 
-    # Save the game
-    resp = client.get("/games/1/save")
+    # Save the game to disk
+    engine_service.SAVE_DIR = tmp_path
+    resp = client.post("/games/1/save")
+    assert resp.status_code == 200
+    save_path = tmp_path / "game_1.json"
+    assert save_path.exists()
+
+    # Export the saved game
+    resp = client.get("/games/1/export")
     assert resp.status_code == 200
     saved = resp.json()
     assert saved["pending_roll"]["dc"] == 10
