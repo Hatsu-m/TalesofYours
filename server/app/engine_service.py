@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -14,6 +15,20 @@ from engine.world_loader import World, SectionEntry, load_world_from_string
 from engine.rules import get_ruleset
 
 from .llm.ollama_client import generate
+
+
+_OPTION_RE = re.compile(r"^\s*(\d+)[.)]\s*(.+)")
+
+
+def _extract_numbered_options(text: str) -> list[str]:
+    """Parse numbered options from DM narration."""
+
+    options: list[str] = []
+    for line in text.splitlines():
+        match = _OPTION_RE.match(line)
+        if match:
+            options.append(match.group(2).strip())
+    return options
 
 
 SAVE_DIR = Path("saves")
@@ -62,6 +77,7 @@ class GameState:
     pending_roll: Dict[str, Any] | None = None
     elapsed_time: float = 0.0
     last_needs_update: float = 0.0
+    last_options: list[str] = field(default_factory=list)
 
     def add_companion(self, companion: dict[str, Any]) -> None:
         """Add a companion to the party enforcing a maximum of three."""
@@ -408,6 +424,7 @@ def _deserialize_game_state(data: Dict[str, Any]) -> GameState:
         pending_roll=data.get("pending_roll"),
         elapsed_time=float(data.get("elapsed_time", 0.0)),
         last_needs_update=float(data.get("last_needs_update", 0.0)),
+        last_options=list(data.get("last_options", [])),
     )
 
 
@@ -428,6 +445,7 @@ def export_game_state(game_id: int) -> Dict[str, Any]:
         "pending_roll": state.pending_roll,
         "elapsed_time": state.elapsed_time,
         "last_needs_update": state.last_needs_update,
+        "last_options": state.last_options,
     }
 
 
@@ -455,7 +473,8 @@ SYSTEM_INSTRUCTIONS = (
     "but never roll for the player. "
     "Resolve companion and pet actions internally without requesting player rolls. "
     "Whenever the player must choose a next step, present three logical, numbered "
-    "options and note that they may always suggest another action."
+    "options and note that they may always suggest another action. "
+    "Before awarding loot, instruct the player to roll to determine its quality."
 )
 
 
@@ -478,6 +497,13 @@ async def run_turn(
     if state is None:
         raise KeyError(f"Unknown game id: {game_id}")
     _advance_time(state, TURN_TIME_SECONDS)
+
+    # Allow numeric responses to select previously offered options.
+    stripped = player_message.strip()
+    if stripped.isdigit() and state.last_options:
+        idx = int(stripped) - 1
+        if 0 <= idx < len(state.last_options):
+            player_message = state.last_options[idx]
 
     world = _WORLDS.get(state.world_id)
     if world is None:
@@ -512,6 +538,9 @@ async def run_turn(
         roll_request = None
         awaiting_player_roll = False
     state.pending_roll = roll_request
+
+    # Track any numbered options for the next turn.
+    state.last_options = _extract_numbered_options(narration)
 
     # Store narration in long‑term memory.
     remember(state.memory, narration)
@@ -591,6 +620,7 @@ async def submit_player_roll(
         awaiting_player_roll = False
 
     state.pending_roll = roll_request
+    state.last_options = _extract_numbered_options(narration)
     remember(state.memory, narration)
     _GAME_STATES[game_id] = state
 
