@@ -34,6 +34,11 @@ def test_save_export_import_flow(tmp_path, monkeypatch):
     save_path = tmp_path / "game_1.json"
     assert save_path.exists()
 
+    # List saved games
+    resp_list = client.get("/games")
+    assert resp_list.status_code == 200
+    assert {"id": 1, "world_id": 1} in resp_list.json()
+
     # Export the saved game
     resp = client.get("/games/1/export")
     assert resp.status_code == 200

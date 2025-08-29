@@ -412,6 +412,20 @@ def load_autosave(game_id: int) -> None:
     _GAME_STATES[game_id] = _deserialize_game_state(data)
 
 
+def list_saved_games() -> list[dict[str, int]]:
+    """Return identifiers for saved games on disk."""
+    games: list[dict[str, int]] = []
+    for path in SAVE_DIR.glob("game_*.json"):
+        try:
+            game_id = int(path.stem.split("_")[1])
+            data = json.loads(path.read_text(encoding="utf-8"))
+            world_id = int(data["world_id"])
+        except (IndexError, KeyError, ValueError, json.JSONDecodeError):
+            continue
+        games.append({"id": game_id, "world_id": world_id})
+    return games
+
+
 def _deserialize_game_state(data: Dict[str, Any]) -> GameState:
     memory = [MemoryItem(**m) for m in data.get("memory", [])]
     return GameState(
