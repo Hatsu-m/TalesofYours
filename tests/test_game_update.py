@@ -26,7 +26,15 @@ def test_update_game_state_endpoint():
     game_id = engine_service.create_game(1)
 
     client = TestClient(app)
-    resp_w = client.patch("/worlds/1", json={"lore": "new"})
+    resp_w = client.patch(
+        "/worlds/1",
+        json={
+            "lore": "new",
+            "locations": [{"name": "Forest", "description": ""}],
+            "factions": [{"name": "Guild", "description": ""}],
+            "items": [{"name": "Sword", "description": ""}],
+        },
+    )
     assert resp_w.status_code == 200
 
     payload = {
@@ -39,4 +47,8 @@ def test_update_game_state_endpoint():
     state = engine_service.get_game_state(game_id)
     assert state["party"][0]["name"] == "Hero"
     assert state["memory"][0]["content"] == "saved town"
-    assert engine_service.get_world(1).lore == "new"
+    world = engine_service.get_world(1)
+    assert world.lore == "new"
+    assert world.locations[0].name == "Forest"
+    assert world.factions[0].name == "Guild"
+    assert world.items[0].name == "Sword"

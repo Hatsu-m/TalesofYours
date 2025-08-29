@@ -98,7 +98,10 @@ class WorldUpdate(BaseModel):
     title: str | None = None
     ruleset: str | None = None
     lore: str | None = None
+    locations: list[Dict[str, str]] | None = None
     npcs: list[Dict[str, str]] | None = None
+    factions: list[Dict[str, str]] | None = None
+    items: list[Dict[str, str]] | None = None
     rules_notes: str | None = None
     stats: list[str] | None = None
 
