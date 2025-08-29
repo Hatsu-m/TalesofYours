@@ -20,24 +20,33 @@ export default function WorldsPage() {
   const [saves, setSaves] = useState<Record<number, number[]>>({})
 
   async function fetchWorlds() {
-    fetch(`${API_BASE}/worlds`)
-      .then((r) => r.json())
-      .then((data) => setWorlds(data as WorldSummary[]))
-      .catch(() => setWorlds([]))
+    try {
+      const res = await fetch(`${API_BASE}/worlds`)
+      const data = (await res.json()) as WorldSummary[]
+      setWorlds(data)
+    } catch {
+      setWorlds([])
+    }
   }
 
   async function fetchSaves() {
-    fetch(`${API_BASE}/games`)
-      .then((r) => r.json())
-      .then((data: SavedGame[]) => {
-        const grouped: Record<number, number[]> = {}
-        for (const g of data) {
-          grouped[g.world_id] = grouped[g.world_id] || []
-          grouped[g.world_id].push(g.id)
-        }
-        setSaves(grouped)
-      })
-      .catch(() => setSaves({}))
+    try {
+      const res = await fetch(`${API_BASE}/games`)
+      const data = (await res.json()) as SavedGame[]
+      const grouped: Record<number, number[]> = {}
+      for (const g of data) {
+        grouped[g.world_id] = grouped[g.world_id] || []
+        grouped[g.world_id].push(g.id)
+      }
+      setSaves(grouped)
+    } catch {
+      setSaves({})
+    }
+  }
+
+  async function handleRefresh() {
+    await fetchWorlds()
+    await fetchSaves()
   }
 
   useEffect(() => {
@@ -123,6 +132,9 @@ export default function WorldsPage() {
         onChange={handleUpload}
         className="w-full max-w-md"
       />
+      <button onClick={handleRefresh} className="text-blue-500 underline">
+        Refresh
+      </button>
       <ul className="w-full max-w-md flex-1 overflow-auto">
         {worlds.map((w) => (
           <li key={w.id} className="border-b border-gray-700 p-2">
