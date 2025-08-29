@@ -3,16 +3,21 @@ import { Link, useNavigate } from 'react-router-dom'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
+interface Entry {
+  name: string
+  description: string
+}
+
 interface ParsedWorld {
   id: string
   title: string
   ruleset: string
   end_goal: string
   lore: string
-  locations: unknown[]
-  npcs: unknown[]
-  factions: unknown[]
-  items: unknown[]
+  locations: Entry[]
+  npcs: Entry[]
+  factions: Entry[]
+  items: Entry[]
   rules_notes?: string | null
 }
 
@@ -23,6 +28,7 @@ export default function WorldEditorPage() {
   )
   const [preview, setPreview] = useState<ParsedWorld | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [locations, setLocations] = useState<Entry[]>([])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -38,8 +44,9 @@ export default function WorldEditorPage() {
           const data = await res.json()
           throw new Error(data.detail ?? 'invalid markdown')
         }
-        const data = await res.json()
+        const data: ParsedWorld = await res.json()
         setPreview(data)
+        setLocations(data.locations ?? [])
         setError(null)
       } catch (err) {
         setPreview(null)
@@ -52,12 +59,28 @@ export default function WorldEditorPage() {
     }
   }, [markdown])
 
+  function mergeLocationsSection(md: string, locs: Entry[]): string {
+    if (!locs.length) {
+      return md.replace(/## Locations[\s\S]*?(?=\n## [^\n]+|$)/, '').trimEnd() + '\n'
+    }
+    let section = '## Locations\n'
+    for (const loc of locs) {
+      section += `\n### ${loc.name}\n${loc.description}\n`
+    }
+    const re = /## Locations[\s\S]*?(?=\n## [^\n]+|$)/
+    if (re.test(md)) {
+      return md.replace(re, section)
+    }
+    return md.trimEnd() + `\n\n${section}`
+  }
+
   async function handleSave() {
     try {
+      const content = mergeLocationsSection(markdown, locations)
       const res = await fetch(`${API_BASE}/worlds/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: markdown }),
+        body: JSON.stringify({ content }),
       })
       if (!res.ok) {
         const msg = await res.text()
@@ -99,7 +122,60 @@ export default function WorldEditorPage() {
         <div className="flex-1 overflow-auto border border-gray-700 p-2">
           {error && <p className="text-red-500">{error}</p>}
           {preview && (
-            <pre className="text-xs">{JSON.stringify(preview, null, 2)}</pre>
+            <>
+              <pre className="text-xs">
+                {JSON.stringify({ ...preview, locations: undefined }, null, 2)}
+              </pre>
+              <div className="mt-4">
+                <h3 className="mb-2 font-bold">Locations</h3>
+                {locations.map((loc, idx) => (
+                  <div key={idx} className="mb-3 rounded border p-2">
+                    <input
+                      value={loc.name}
+                      onChange={(e) =>
+                        setLocations((prev) =>
+                          prev.map((l, i) =>
+                            i === idx ? { ...l, name: e.target.value } : l,
+                          ),
+                        )
+                      }
+                      placeholder="Name"
+                      className="mb-1 w-full border p-1"
+                    />
+                    <textarea
+                      value={loc.description}
+                      onChange={(e) =>
+                        setLocations((prev) =>
+                          prev.map((l, i) =>
+                            i === idx
+                              ? { ...l, description: e.target.value }
+                              : l,
+                          ),
+                        )
+                      }
+                      placeholder="Description"
+                      className="w-full border p-1"
+                    />
+                    <button
+                      onClick={() =>
+                        setLocations((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                      className="mt-1 text-sm text-red-600"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() =>
+                    setLocations((prev) => [...prev, { name: '', description: '' }])
+                  }
+                  className="rounded bg-green-600 px-2 py-1 text-sm text-white hover:bg-green-700"
+                >
+                  Add Location
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>
