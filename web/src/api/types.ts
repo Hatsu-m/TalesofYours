@@ -202,7 +202,24 @@ export interface paths {
             cookie?: never;
         };
         /** Save Game */
-        get: operations["save_game_games__game_id__save_get"];
+        get?: never;
+        put?: never;
+        post: operations["save_game_games__game_id__save_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/games/{game_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Game */
+        get: operations["export_game_games__game_id__export_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -677,7 +694,40 @@ export interface operations {
             };
         };
     };
-    save_game_games__game_id__save_get: {
+    save_game_games__game_id__save_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_game_games__game_id__export_get: {
         parameters: {
             query?: never;
             header?: never;

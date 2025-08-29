@@ -20,7 +20,6 @@ export default function PlayPage() {
     instructions: string
   } | null>(null)
   const [worldTitle, setWorldTitle] = useState<string | null>(null)
-  const [worldId, setWorldId] = useState<string | null>(null)
   const [party, setParty] = useState<Character[]>([])
   const [showCreator, setShowCreator] = useState(false)
   const [statKeys, setStatKeys] = useState<string[]>([])
@@ -42,7 +41,6 @@ export default function PlayPage() {
         )
         setParty(game.party ?? [])
         setStatKeys(world.stats ?? [])
-        setWorldId(game.world_id)
       const map: Record<string, { label: string; instructions: string }> = {
         dnd5e: {
           label: 'D&D 5e',
@@ -134,7 +132,12 @@ export default function PlayPage() {
 
   async function saveGame() {
     if (!gameId) return
-    const resp = await fetch(`${API_BASE}/games/${gameId}/save`)
+    await fetch(`${API_BASE}/games/${gameId}/save`, { method: 'POST' })
+  }
+
+  async function exportGame() {
+    if (!gameId) return
+    const resp = await fetch(`${API_BASE}/games/${gameId}/export`)
     if (!resp.ok) return
     const data = await resp.json()
     const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -148,24 +151,10 @@ export default function PlayPage() {
     URL.revokeObjectURL(url)
   }
 
-  async function exportWorld() {
-    if (!worldId) return
-    const resp = await fetch(`${API_BASE}/worlds/${worldId}/export`)
-    if (!resp.ok) return
-    const text = await resp.text()
-    const blob = new Blob([text], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `world-${worldId}-export.md`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
   function handleCommand(cmd: string) {
     switch (cmd) {
       case 'save':
-        console.log('save game')
+        void saveGame()
         break
       case 'party':
         console.log('show party')
@@ -210,7 +199,7 @@ export default function PlayPage() {
             Save
           </button>
           <button
-            onClick={exportWorld}
+            onClick={exportGame}
             className="rounded bg-gray-700 px-2 py-1 text-white hover:bg-gray-800"
           >
             Export

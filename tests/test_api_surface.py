@@ -23,6 +23,7 @@ def test_openapi_has_public_routes():
         "/games/{game_id}/companions",
         "/games/{game_id}/companions/{companion_id}",
         "/games/{game_id}/save",
+        "/games/{game_id}/export",
         "/games/import",
         "/health",
         "/health/llm",

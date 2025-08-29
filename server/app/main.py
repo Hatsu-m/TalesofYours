@@ -8,6 +8,7 @@ import logging
 from .engine_service import (
     DMResponse,
     add_companion,
+    autosave_game_state,
     create_game,
     export_game_state,
     get_game_state,
@@ -223,8 +224,17 @@ def update_game_endpoint(game_id: int, payload: GameUpdate) -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/games/{game_id}/save")
-def save_game(game_id: int) -> Dict[str, Any]:
+@app.post("/games/{game_id}/save")
+def save_game(game_id: int) -> dict[str, str]:
+    try:
+        autosave_game_state(game_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "ok"}
+
+
+@app.get("/games/{game_id}/export")
+def export_game(game_id: int) -> Dict[str, Any]:
     try:
         return export_game_state(game_id)
     except KeyError as exc:
