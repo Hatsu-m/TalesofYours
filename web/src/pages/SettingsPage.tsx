@@ -9,10 +9,13 @@ export default function SettingsPage() {
     () => localStorage.getItem('model') ?? 'llama3',
   )
   const [title, setTitle] = useState('')
+  const [goal, setGoal] = useState('')
   const [lore, setLore] = useState('')
   const [rulesNotes, setRulesNotes] = useState('')
   const [partyText, setPartyText] = useState('')
   const [memoryText, setMemoryText] = useState('')
+  const [locationsText, setLocationsText] = useState('')
+  const [factionsText, setFactionsText] = useState('')
   const [worldId, setWorldId] = useState<number | null>(null)
   const [gameId, setGameId] = useState<string | null>(null)
 
@@ -36,8 +39,11 @@ export default function SettingsPage() {
       )
       setWorldId(game.world_id)
       setTitle(world.title ?? '')
+      setGoal(world.end_goal ?? '')
       setLore(world.lore ?? '')
       setRulesNotes(world.rules_notes ?? '')
+      setLocationsText(JSON.stringify(world.locations ?? [], null, 2))
+      setFactionsText(JSON.stringify(world.factions ?? [], null, 2))
     }
     load()
   }, [])
@@ -52,10 +58,19 @@ export default function SettingsPage() {
     try {
       const party = JSON.parse(partyText)
       const memory = JSON.parse(memoryText)
+      const locations = JSON.parse(locationsText)
+      const factions = JSON.parse(factionsText)
       await fetch(`${API_BASE}/worlds/${worldId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, lore, rules_notes: rulesNotes }),
+        body: JSON.stringify({
+          title,
+          lore,
+          rules_notes: rulesNotes,
+          end_goal: goal,
+          locations,
+          factions,
+        }),
       })
       await fetch(`${API_BASE}/games/${gameId}`, {
         method: 'PATCH',
@@ -64,7 +79,7 @@ export default function SettingsPage() {
       })
       alert('Settings saved')
     } catch {
-      alert('Invalid JSON in party or memory')
+      alert('Invalid JSON in party, memory, locations, or factions')
     }
   }
 
@@ -107,6 +122,13 @@ export default function SettingsPage() {
           placeholder="Title"
           className="w-full border p-1 bg-gray-800 text-white"
         />
+        <input
+          type="text"
+          value={goal}
+          onChange={(e) => setGoal(e.target.value)}
+          placeholder="Goal"
+          className="w-full border p-1 bg-gray-800 text-white"
+        />
         <textarea
           value={lore}
           onChange={(e) => setLore(e.target.value)}
@@ -138,6 +160,26 @@ export default function SettingsPage() {
         <textarea
           value={memoryText}
           onChange={(e) => setMemoryText(e.target.value)}
+          className="w-full border p-1 bg-gray-800 text-white font-mono"
+          rows={6}
+        />
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold">Locations</h2>
+        <textarea
+          value={locationsText}
+          onChange={(e) => setLocationsText(e.target.value)}
+          className="w-full border p-1 bg-gray-800 text-white font-mono"
+          rows={6}
+        />
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold">Factions</h2>
+        <textarea
+          value={factionsText}
+          onChange={(e) => setFactionsText(e.target.value)}
           className="w-full border p-1 bg-gray-800 text-white font-mono"
           rows={6}
         />
