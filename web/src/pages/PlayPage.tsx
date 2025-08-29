@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useCallback, useEffect, useState } from 'react'
 import ChatStream, { type ChatMessage } from '../components/ChatStream'
 import InputBar from '../components/InputBar'
@@ -13,6 +13,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export default function PlayPage() {
   const { gameId } = useParams()
+  const navigate = useNavigate()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [pendingRoll, setPendingRoll] = useState<RollRequest | null>(null)
   const [rulesInfo, setRulesInfo] = useState<{
@@ -20,6 +21,7 @@ export default function PlayPage() {
     instructions: string
   } | null>(null)
   const [worldTitle, setWorldTitle] = useState<string | null>(null)
+  const [worldId, setWorldId] = useState<number | null>(null)
   const [party, setParty] = useState<Character[]>([])
   const [showCreator, setShowCreator] = useState(false)
   const [statKeys, setStatKeys] = useState<string[]>([])
@@ -35,6 +37,7 @@ export default function PlayPage() {
     const world = await fetch(`${API_BASE}/worlds/${game.world_id}`).then((r) =>
       r.json(),
     )
+    setWorldId(game.world_id)
     setParty(game.party ?? [])
     setStatKeys(world.stats ?? [])
     const map: Record<string, { label: string; instructions: string }> = {
@@ -140,12 +143,26 @@ export default function PlayPage() {
   }
 
   async function loadGame() {
-    if (!gameId) return
-    const resp = await fetch(`${API_BASE}/games/${gameId}/load`, {
+    if (!worldId) return
+    const resp = await fetch(`${API_BASE}/games`)
+    if (!resp.ok) return
+    const data = (await resp.json()) as { id: number; world_id: number }[]
+    const options = data.filter((g) => g.world_id === worldId)
+    if (options.length === 0) {
+      alert('No saves for this world')
+      return
+    }
+    const choice = prompt(
+      `Select save to load:\n${options.map((g) => g.id).join('\n')}`,
+    )
+    if (!choice) return
+    const selected = Number(choice)
+    if (!options.some((g) => g.id === selected)) return
+    const respLoad = await fetch(`${API_BASE}/games/${selected}/load`, {
       method: 'POST',
     })
-    if (resp.ok) {
-      await refreshGame()
+    if (respLoad.ok) {
+      navigate(`/play/${selected}`)
     }
   }
 
