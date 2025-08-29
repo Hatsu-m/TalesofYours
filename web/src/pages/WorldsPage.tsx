@@ -9,9 +9,15 @@ interface WorldSummary {
   ruleset: string
 }
 
+interface SavedGame {
+  id: number
+  world_id: number
+}
+
 export default function WorldsPage() {
   const navigate = useNavigate()
   const [worlds, setWorlds] = useState<WorldSummary[]>([])
+  const [saves, setSaves] = useState<Record<number, number[]>>({})
 
   async function fetchWorlds() {
     fetch(`${API_BASE}/worlds`)
@@ -20,8 +26,23 @@ export default function WorldsPage() {
       .catch(() => setWorlds([]))
   }
 
+  async function fetchSaves() {
+    fetch(`${API_BASE}/games`)
+      .then((r) => r.json())
+      .then((data: SavedGame[]) => {
+        const grouped: Record<number, number[]> = {}
+        for (const g of data) {
+          grouped[g.world_id] = grouped[g.world_id] || []
+          grouped[g.world_id].push(g.id)
+        }
+        setSaves(grouped)
+      })
+      .catch(() => setSaves({}))
+  }
+
   useEffect(() => {
     fetchWorlds()
+    fetchSaves()
   }, [])
 
   async function importFile(file: File) {
@@ -80,6 +101,15 @@ export default function WorldsPage() {
     navigate(`/play/${id}`)
   }
 
+  async function handleLoad(gameId: number) {
+    const res = await fetch(`${API_BASE}/games/${gameId}/load`, {
+      method: 'POST',
+    })
+    if (res.ok) {
+      navigate(`/play/${gameId}`)
+    }
+  }
+
   return (
     <div
       onDrop={handleDrop}
@@ -103,6 +133,20 @@ export default function WorldsPage() {
               {w.title}{' '}
               <span className="text-sm text-gray-500">({w.ruleset})</span>
             </button>
+            {saves[w.id] && (
+              <ul className="mt-1 ml-2 space-y-1 text-sm">
+                {saves[w.id].map((sid) => (
+                  <li key={sid}>
+                    <button
+                      onClick={() => handleLoad(sid)}
+                      className="text-left text-blue-500 hover:underline"
+                    >
+                      Load save #{sid}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </li>
         ))}
       </ul>

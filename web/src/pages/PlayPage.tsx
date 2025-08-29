@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import ChatStream, { type ChatMessage } from '../components/ChatStream'
 import InputBar from '../components/InputBar'
 import RollPrompt, { type RollRequest } from '../components/RollPrompt'
@@ -27,6 +27,32 @@ export default function PlayPage() {
     () => localStorage.getItem('model') ?? 'llama3',
   )
 
+  const refreshGame = useCallback(async () => {
+    if (!gameId) return
+    const game = await fetch(`${API_BASE}/games/${gameId}`).then((r) =>
+      r.json(),
+    )
+    const world = await fetch(`${API_BASE}/worlds/${game.world_id}`).then((r) =>
+      r.json(),
+    )
+    setParty(game.party ?? [])
+    setStatKeys(world.stats ?? [])
+    const map: Record<string, { label: string; instructions: string }> = {
+      dnd5e: {
+        label: 'D&D 5e',
+        instructions:
+          'Use Dungeons & Dragons 5th Edition rules. A 20 always succeeds and a 1 always fails.',
+      },
+      custom_d6: {
+        label: 'Custom d6',
+        instructions:
+          'Roll a single d6 for checks. A 6 always succeeds and a 1 always fails.',
+      },
+    }
+    setRulesInfo(map[world.ruleset])
+    setWorldTitle(world.title)
+  }, [gameId])
+
   useEffect(() => {
     if (gameId) {
       localStorage.setItem('gameId', gameId)
@@ -34,30 +60,8 @@ export default function PlayPage() {
   }, [gameId])
 
   useEffect(() => {
-      async function loadRules() {
-        const game = await fetch(`${API_BASE}/games/${gameId}`).then((r) => r.json())
-        const world = await fetch(`${API_BASE}/worlds/${game.world_id}`).then((r) =>
-          r.json(),
-        )
-        setParty(game.party ?? [])
-        setStatKeys(world.stats ?? [])
-      const map: Record<string, { label: string; instructions: string }> = {
-        dnd5e: {
-          label: 'D&D 5e',
-          instructions:
-            'Use Dungeons & Dragons 5th Edition rules. A 20 always succeeds and a 1 always fails.',
-        },
-        custom_d6: {
-          label: 'Custom d6',
-          instructions:
-            'Roll a single d6 for checks. A 6 always succeeds and a 1 always fails.',
-        },
-      }
-      setRulesInfo(map[world.ruleset])
-      setWorldTitle(world.title)
-    }
-    loadRules()
-  }, [gameId])
+    void refreshGame()
+  }, [refreshGame])
 
   async function sendAction(text: string) {
     const playerMsg: ChatMessage = {
@@ -135,6 +139,16 @@ export default function PlayPage() {
     await fetch(`${API_BASE}/games/${gameId}/save`, { method: 'POST' })
   }
 
+  async function loadGame() {
+    if (!gameId) return
+    const resp = await fetch(`${API_BASE}/games/${gameId}/load`, {
+      method: 'POST',
+    })
+    if (resp.ok) {
+      await refreshGame()
+    }
+  }
+
   async function exportGame() {
     if (!gameId) return
     const resp = await fetch(`${API_BASE}/games/${gameId}/export`)
@@ -155,6 +169,9 @@ export default function PlayPage() {
     switch (cmd) {
       case 'save':
         void saveGame()
+        break
+      case 'load':
+        void loadGame()
         break
       case 'party':
         console.log('show party')
@@ -192,6 +209,12 @@ export default function PlayPage() {
           <div className="text-sm font-semibold">Story: {worldTitle}</div>
         )}
         <div className="mt-4 flex flex-col space-y-2">
+          <button
+            onClick={loadGame}
+            className="rounded bg-gray-700 px-2 py-1 text-white hover:bg-gray-800"
+          >
+            Load
+          </button>
           <button
             onClick={saveGame}
             className="rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-700"

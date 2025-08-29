@@ -11,6 +11,7 @@ from .engine_service import (
     autosave_game_state,
     create_game,
     export_game_state,
+    list_saved_games,
     get_game_state,
     get_world,
     import_game_state,
@@ -119,6 +120,12 @@ class PlayerRoll(BaseModel):
 
 class GameCreate(BaseModel):
     world_id: int
+
+
+@app.get("/games")
+def list_games_endpoint() -> list[dict[str, int]]:
+    """List saved games found on disk."""
+    return list_saved_games()
 
 
 @app.post("/games")
