@@ -324,8 +324,9 @@ def update_world(world_id: int, updates: Dict[str, Any]) -> None:
     if world is None:
         raise KeyError(f"Unknown world id: {world_id}")
 
-    if "npcs" in updates:
-        world.npcs = [SectionEntry(**n) for n in updates.pop("npcs")]
+    for section in ("locations", "npcs", "factions", "items"):
+        if section in updates:
+            setattr(world, section, [SectionEntry(**n) for n in updates.pop(section)])
     for key, value in updates.items():
         setattr(world, key, value)
 
