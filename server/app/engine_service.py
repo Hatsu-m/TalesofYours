@@ -11,7 +11,12 @@ from typing import Any, Dict
 
 from engine.context import build_prompt
 from engine.memory import MemoryItem, remember
-from engine.world_loader import World, SectionEntry, load_world_from_string
+from engine.world_loader import (
+    World,
+    SectionEntry,
+    load_world,
+    load_world_from_string,
+)
 from engine.rules import get_ruleset
 
 from .llm.ollama_client import generate
@@ -33,6 +38,11 @@ def _extract_numbered_options(text: str) -> list[str]:
 
 SAVE_DIR = Path(__file__).resolve().parents[2] / "saves"
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
+
+WORLD_DIR = Path(__file__).resolve().parents[2] / "worlds"
+WORLD_DIR.mkdir(parents=True, exist_ok=True)
+
+_WORLD_FILES: dict[Path, int] = {}
 
 
 # In-memory storage used as a temporary stand‑in for a database.  The
@@ -146,9 +156,25 @@ def advance_time(game_id: int, seconds: float) -> None:
     _advance_time(state, seconds)
 
 
+def _load_world_files() -> None:
+    """Load world definitions from markdown files into memory."""
+
+    for path in WORLD_DIR.glob("*.md"):
+        if path in _WORLD_FILES:
+            continue
+        try:
+            world = load_world(path)
+        except Exception:
+            continue
+        new_id = max(_WORLDS.keys(), default=0) + 1
+        _WORLD_FILES[path] = new_id
+        _WORLDS[new_id] = world
+
+
 def list_worlds() -> list[dict[str, Any]]:
     """Return a minimal listing of available worlds."""
 
+    _load_world_files()
     return [
         {"id": wid, "title": w.title, "ruleset": w.ruleset}
         for wid, w in _WORLDS.items()
