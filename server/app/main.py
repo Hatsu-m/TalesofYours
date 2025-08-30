@@ -16,6 +16,7 @@ from .engine_service import (
     get_world,
     import_game_state,
     import_world,
+    read_transcript,
     validate_world,
     list_worlds,
     remove_companion,
@@ -252,6 +253,13 @@ def load_game(game_id: int) -> dict[str, str]:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {"status": "ok"}
+
+
+@app.get("/games/{game_id}/transcript")
+def get_transcript(game_id: int) -> list[Dict[str, str]]:
+    """Return the chat transcript for a game."""
+
+    return read_transcript(game_id)
 
 
 @app.get("/games/{game_id}/export")

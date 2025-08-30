@@ -54,6 +54,25 @@ export default function PlayPage() {
     }
     setRulesInfo(map[world.ruleset])
     setWorldTitle(world.title)
+    const transcriptResp = await fetch(
+      `${API_BASE}/games/${gameId}/transcript`,
+    )
+    if (transcriptResp.ok) {
+      const data = (await transcriptResp.json()) as {
+        actor: string
+        text: string
+      }[]
+      const history: ChatMessage[] = data
+        .filter((e) => e.actor === 'player' || e.actor === 'dm')
+        .map((e) => ({
+          id: crypto.randomUUID(),
+          role: e.actor as 'player' | 'dm',
+          content: e.text,
+        }))
+      setMessages(history)
+    } else {
+      setMessages([])
+    }
   }, [gameId])
 
   useEffect(() => {
