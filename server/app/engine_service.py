@@ -424,6 +424,41 @@ def append_transcript(game_id: int, actor: str, text: str) -> None:
         fh.write(json.dumps(entry) + "\n")
 
 
+def read_transcript(game_id: int) -> list[dict[str, str]]:
+    """Return the stored transcript for a game.
+
+    Each entry contains the ``actor`` and their ``text``. If no transcript
+    exists yet for the given ``game_id``, an empty list is returned.
+    """
+
+    path = _transcript_path(game_id)
+    if not path.exists():
+        return []
+
+    entries: list[dict[str, str]] = []
+    with path.open("r", encoding="utf-8") as fh:
+        for line in fh:
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if (
+                isinstance(entry, dict)
+                and {
+                    "actor",
+                    "text",
+                }
+                <= entry.keys()
+            ):
+                entries.append(
+                    {
+                        "actor": str(entry["actor"]),
+                        "text": str(entry["text"]),
+                    }
+                )
+    return entries
+
+
 def autosave_game_state(game_id: int) -> None:
     data = export_game_state(game_id)
     path = _autosave_path(game_id)

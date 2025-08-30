@@ -3,9 +3,12 @@ import json
 import sys
 from pathlib import Path
 
+from fastapi.testclient import TestClient
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from server.app import engine_service
+from server.app.main import app
 from engine.world_loader import World, SectionEntry
 
 
@@ -46,6 +49,14 @@ def test_transcript_and_autosave(tmp_path, monkeypatch):
     lines = [json.loads(line) for line in transcript.read_text().splitlines()]
     assert lines[0] == {"actor": "player", "text": "hello"}
     assert lines[1]["actor"] == "dm"
+
+    history = engine_service.read_transcript(game_id)
+    assert history[0] == {"actor": "player", "text": "hello"}
+
+    client = TestClient(app)
+    resp_hist = client.get(f"/games/{game_id}/transcript")
+    assert resp_hist.status_code == 200
+    assert resp_hist.json()[0] == {"actor": "player", "text": "hello"}
 
     data = json.loads(autosave.read_text())
     assert data["flags"]["score"] == 7
