@@ -50,3 +50,28 @@ def test_party_limits_and_prompt_personas() -> None:
     world = _make_world()
     prompt = context.build_prompt(world, state)
     assert "C0: P0" in prompt and "Pet0: PP0" in prompt
+
+
+def test_inventory_in_prompt() -> None:
+    """Inventory items should be reflected in the DM prompt."""
+
+    state = models.GameState(
+        world_id=1,
+        current_location=0,
+        party=[
+            {
+                "id": 1,
+                "name": "Hero",
+                "persona": "Brave adventurer",
+                "inventory": ["Potion", "Sword"],
+            }
+        ],
+        flags={},
+        timeline=[],
+        memory=[],
+        pending_roll=None,
+    )
+
+    world = _make_world()
+    prompt = context.build_prompt(world, state)
+    assert "inventory: Potion, Sword" in prompt
